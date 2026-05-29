@@ -1,7 +1,7 @@
 import asyncio
 from typing import Callable, Protocol
 
-from src.core.models import Channel, Message, User
+from tgm.core.models import Channel, Message, User
 
 
 class ClientProtocol(Protocol):

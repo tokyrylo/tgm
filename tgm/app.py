@@ -2,9 +2,9 @@ import asyncio
 
 from textual.app import App
 
-from src.core import ClientProtocol
-from src.screens import LoginScreen
-from src.screens.login.events import CodeSubmitted, PasswordSubmitted, PhoneSubmitted, SmsRequested
+from tgm.core import ClientProtocol
+from tgm.screens import LoginScreen
+from tgm.screens.login.events import CodeSubmitted, PasswordSubmitted, PhoneSubmitted, SmsRequested
 
 
 class TgmApp(App):

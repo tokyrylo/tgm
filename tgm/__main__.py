@@ -1,4 +1,4 @@
-from src.app import TgmApp
+from tgm.app import TgmApp
 
 
 def main():

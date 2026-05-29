@@ -4,9 +4,9 @@ from textual.containers import Center, Middle
 from textual.reactive import reactive
 from textual.widgets import Button, Input, LoadingIndicator, Static
 
-from src.screens._base import TgmScreen
-from src.screens.login.events import CodeSubmitted, PasswordSubmitted, PhoneSubmitted, SmsRequested
-from src.screens.login.steps import CodeStep, LoginStep, PasswordStep, PhoneStep
+from tgm.screens._base import TgmScreen
+from tgm.screens.login.events import CodeSubmitted, PasswordSubmitted, PhoneSubmitted, SmsRequested
+from tgm.screens.login.steps import CodeStep, LoginStep, PasswordStep, PhoneStep
 
 
 class LoginError(Static):
