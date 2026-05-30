@@ -66,11 +66,11 @@ class InputBar(Horizontal):
         """Initial sync only — subsequent updates come via SetReply / ClearReply."""
         self._update_reply(self.ctx.reply_to_msg)
 
-    def on_input_bar_set_reply(self, event: SetReply) -> None:
+    def on_set_reply(self, event: SetReply) -> None:
         self._update_reply(event.reply)
         event.stop()
 
-    def on_input_bar_clear_reply(self, _: ClearReply) -> None:
+    def on_clear_reply(self, _: ClearReply) -> None:
         self._update_reply(None)
 
     def _update_reply(self, reply: Reply | None) -> None:

@@ -38,12 +38,12 @@ class ChannelList(Vertical):
             self.post_message(CreateChannel())
             event.stop()
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if isinstance(event.item, ChannelPreview):
             self.post_message(ChannelSelected(event.item.channel.id))
             event.stop()
 
-    def on_channel_list_avatar_updated(self, event: AvatarUpdated) -> None:
+    def on_avatar_updated(self, event: AvatarUpdated) -> None:
         item = self._items_by_id.get(event.channel_id)
         if item:
             item.invalidate_avatar()

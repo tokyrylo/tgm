@@ -241,3 +241,27 @@ LoginError {
     height: auto;
     padding: 0 0 1 0;
 }
+
+GlobalSearchScreen {
+    align: center middle;
+}
+
+#gs-container {
+    width: 60;
+    height: 20;
+    background: #182533;
+    border: solid #1e2a35;
+    padding: 1;
+}
+
+#gs-input {
+    margin-bottom: 1;
+}
+
+#gs-results {
+    height: 1fr;
+}
+
+#gs-hint {
+    height: 1;
+}

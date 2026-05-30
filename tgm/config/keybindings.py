@@ -16,7 +16,6 @@ DEFAULT_BINDINGS: dict[str, list[tuple]] = {
         ("ctrl+s", "open_settings", "Settings"),
         ("ctrl+q", "quit", "Quit"),
         ("ctrl+t", "toggle_dark", "Theme"),
-        ("ctrl+p", "open_global_search", "Find"),
     ],
     "chat": [
         ("ctrl+o", "open_emoji_picker", "Emoji"),

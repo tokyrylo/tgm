@@ -8,6 +8,7 @@ from textual.widgets import RichLog
 from tgm.config.themes import ACCENT_THEMES, PALETTE
 from tgm.core.models.messages import Message
 from tgm.core.protocol import ClientProtocol
+from tgm.widgets.input.events import SetReply
 
 from .bubble import Bubble, RenderContext, render_bubble, render_date_sep
 
@@ -31,6 +32,7 @@ class MessageList(RichLog):
         self._search_query: str = ""
         self._match_indices: list[int] = []
         self._current_match: int = -1
+        self._cursor: int | None = None
 
     @property
     def ctx(self) -> AppContext:
@@ -40,6 +42,7 @@ class MessageList(RichLog):
 
     def load_messages(self, messages: list[Message]) -> None:
         self.clear()
+        self._cursor = None
         self._msgs = list(messages)
         self._msgs_by_id = {m.id: m for m in messages}
         self._rendered = []
@@ -129,7 +132,9 @@ class MessageList(RichLog):
             if not highlight_query:
                 self._rendered.append(bubble)
 
-    def _write_bubble(self, msg: Message, highlight_query: str, rctx: RenderContext) -> Bubble:
+    def _write_bubble(
+        self, msg: Message, highlight_query: str, rctx: RenderContext, *, is_cursor: bool = False
+    ) -> Bubble:
         ctx = self.ctx
         is_own = msg.user_id == ctx.client.current_user_id
         user = ctx.client.users.get(msg.user_id)
@@ -140,7 +145,64 @@ class MessageList(RichLog):
             user=user,
             msgs_by_id=self._msgs_by_id,
             highlight_query=highlight_query,
+            is_cursor=is_cursor,
         )
         for line in bubble.lines:
             self.write(line)
         return bubble
+
+    def _rerender_all(self) -> None:
+        rctx = self._render_ctx()
+        self.clear()
+        self._rendered = []
+        last_date: date_cls | None = None
+        for i, msg in enumerate(self._msgs):
+            msg_date = msg.timestamp.date()
+            if last_date != msg_date:
+                self.write(render_date_sep(msg.timestamp, rctx.width))
+                last_date = msg_date
+            bubble = self._write_bubble(msg, self._search_query, rctx, is_cursor=(i == self._cursor))
+            self._rendered.append(bubble)
+
+    def _scroll_to_cursor(self) -> None:
+        if self._cursor is None or not self._rendered:
+            return
+        total = max(len(self._msgs) - 1, 1)
+        frac = self._cursor / total
+        max_scroll = max(0, self.virtual_size.height - self.size.height)
+        self.scroll_to(y=int(frac * max_scroll), animate=False)
+
+    def on_key(self, event) -> None:
+        key = event.key
+        if key in ("up", "k"):
+            if not self._msgs:
+                return
+            if self._cursor is None:
+                self._cursor = len(self._msgs) - 1
+            else:
+                self._cursor = max(0, self._cursor - 1)
+            self._rerender_all()
+            self._scroll_to_cursor()
+            event.prevent_default()
+        elif key in ("down", "j"):
+            if self._cursor is not None:
+                new = self._cursor + 1
+                if new >= len(self._msgs):
+                    self._cursor = None
+                    self._rerender_all()
+                    self.scroll_end(animate=False)
+                else:
+                    self._cursor = new
+                    self._rerender_all()
+                    self._scroll_to_cursor()
+                event.prevent_default()
+        elif key == "r":
+            if self._cursor is not None and self._cursor < len(self._msgs):
+                self.post_message(SetReply(self._msgs[self._cursor]))
+                self._cursor = None
+                self._rerender_all()
+        elif key == "escape":
+            if self._cursor is not None:
+                self._cursor = None
+                self._rerender_all()
+                event.prevent_default()

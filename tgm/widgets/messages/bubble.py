@@ -49,9 +49,10 @@ class RenderContext:
 
 # ── frame ─────────────────────────────────────────────────────────────────────
 
-def wrap_frame(lines: list[str], border_col: str, width: int) -> list[str]:
+def wrap_frame(lines: list[str], border_col: str, width: int, *, bright: bool = False) -> list[str]:
     bar = "─" * max(0, width - 2)
-    return [f"[dim {border_col}]╭{bar}╮[/]"] + lines + [f"[dim {border_col}]╰{bar}╯[/]"]
+    style = f"bold {border_col}" if bright else f"dim {border_col}"
+    return [f"[{style}]╭{bar}╮[/]"] + lines + [f"[{style}]╰{bar}╯[/]"]
 
 
 # ── date separator ────────────────────────────────────────────────────────────
@@ -187,9 +188,10 @@ def render_bubble(
     user: User | None,
     msgs_by_id: dict[str, Message],
     highlight_query: str = "",
+    is_cursor: bool = False,
 ) -> Bubble:
     cache_key = _bubble_cache_key(msg, ctx)
-    if not highlight_query and cache_key in _bubble_cache:
+    if not highlight_query and not is_cursor and cache_key in _bubble_cache:
         return _bubble_cache[cache_key]
 
     ts = msg.timestamp.strftime("%H:%M")
@@ -221,9 +223,10 @@ def render_bubble(
 
     # media-only message
     if not msg.text and has_media:
-        lines = wrap_frame(content, border_col, ctx.width) if ctx.large else content
+        lines = wrap_frame(content, border_col, ctx.width, bright=is_cursor) if ctx.large else content
         bubble = Bubble(lines=lines, msg_id=msg.id, kind="media")
-        _bubble_cache[cache_key] = bubble
+        if not is_cursor:
+            _bubble_cache[cache_key] = bubble
         return bubble
 
     if is_own:
@@ -254,7 +257,8 @@ def render_bubble(
         )
         kind = "other"
 
-    lines = wrap_frame(content, border_col, ctx.width) if ctx.large else content
+    lines = wrap_frame(content, border_col, ctx.width, bright=is_cursor) if ctx.large else content
     bubble = Bubble(lines=lines, msg_id=msg.id, kind=kind)
-    _bubble_cache[cache_key] = bubble
+    if not is_cursor:
+        _bubble_cache[cache_key] = bubble
     return bubble
