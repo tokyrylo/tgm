@@ -20,7 +20,7 @@ DEFAULT_BINDINGS: dict[str, list[tuple]] = {
     "chat": [
         ("ctrl+o", "open_emoji_picker", "Emoji"),
         ("ctrl+g", "app.create_group", "New"),
-        ("ctrl+i", "app.open_chat_settings", "Chat info"),
+        ("ctrl+u", "app.open_chat_settings", "Chat info"),
         ("ctrl+k", "focus_channel_list", "Channels"),
         ("ctrl+j", "focus_input", "Message"),
         ("ctrl+f", "app.attach_file", "Attach"),

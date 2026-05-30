@@ -265,3 +265,59 @@ GlobalSearchScreen {
 #gs-hint {
     height: 1;
 }
+
+/* ── channel info modal ──────────────────────────────────────────────────── */
+
+ChannelInfoModal {
+    align: center middle;
+}
+
+#ci-container {
+    width: 44;
+    height: auto;
+    max-height: 30;
+    background: $bg_surface;
+    border: solid $border;
+    padding: 1 2;
+}
+
+#ci-avatar {
+    text-align: center;
+    padding: 1 0;
+}
+
+#ci-name {
+    text-align: center;
+    padding-bottom: 0;
+}
+
+#ci-subtitle {
+    text-align: center;
+    padding-bottom: 1;
+}
+
+#ci-body {
+    height: auto;
+    max-height: 14;
+    border-top: solid $border;
+    padding-top: 1;
+}
+
+.ci-label {
+    color: #888;
+    height: 1;
+}
+
+.ci-value {
+    height: auto;
+    padding-bottom: 0;
+}
+
+.ci-spacer {
+    height: 1;
+}
+
+#ci-close {
+    margin-top: 1;
+    width: 1fr;
+}

@@ -1,4 +1,10 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tgm.core.models.user import User
 
 
 @dataclass
@@ -16,3 +22,12 @@ class ChannelSettings:
     color: str = ""
     notify: bool = True
     forward_to: str = ""
+
+
+@dataclass
+class ChannelInfo:
+    channel: Channel
+    is_dm: bool
+    user: User | None = None
+    members: list[User] = field(default_factory=list)
+    members_count: int = 0

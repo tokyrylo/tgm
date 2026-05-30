@@ -6,3 +6,6 @@ class User:
     id: str
     name: str
     color: str = "text"
+    username: str = ""
+    phone: str = ""
+    bio: str = ""

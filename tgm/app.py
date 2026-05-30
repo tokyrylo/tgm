@@ -186,6 +186,12 @@ class TgmApp(App):
 
         self.push_screen(SettingsScreen())
 
+    def action_open_chat_settings(self) -> None:
+        from tgm.screens.chat.info import ChannelInfoModal
+
+        if self.current_channel_id:
+            self.push_screen(ChannelInfoModal(self.current_channel_id))
+
     def on_global_setting_changed(self, event: GlobalSettingChanged) -> None:
         setattr(self, event.key, event.value)
         _save_global(**{event.key: event.value})

@@ -5,20 +5,20 @@ import random
 from datetime import datetime, timedelta
 from typing import Callable
 
-from tgm.core.models.channel import Channel
+from tgm.core.models.channel import Channel, ChannelInfo
 from tgm.core.models.messages import Message
 from tgm.core.models.user import User
 
 # ── users ──────────────────────────────────────────────────────────────────
 
-_ME    = User(id="me",  name="You",            color="text")
-_ALICE = User(id="u1",  name="Alice Johnson",  color="#2B5278")
-_BOB   = User(id="u2",  name="Bob Smith",      color="#1E6B3A")
-_CAROL = User(id="u3",  name="Carol White",    color="#7A2D2D")
-_DAVE  = User(id="u4",  name="Dave Brown",     color="#4A2D7A")
-_EVE   = User(id="u5",  name="Eve Wilson",     color="#5E4A1E")
-_FRANK = User(id="u6",  name="Frank Lee",      color="#1E5E5E")
-_GRACE = User(id="u7",  name="Grace Kim",      color="#6B1E6B")
+_ME    = User(id="me",  name="You",            color="text",    username="you",         phone="+1 555 000 0000", bio="")
+_ALICE = User(id="u1",  name="Alice Johnson",  color="#2B5278", username="alice_j",     phone="+44 7911 123456", bio="Product designer at Acme Corp")
+_BOB   = User(id="u2",  name="Bob Smith",      color="#1E6B3A", username="bob_smith",   phone="+1 555 234 5678", bio="Backend engineer · Go & Rust")
+_CAROL = User(id="u3",  name="Carol White",    color="#7A2D2D", username="carol_w",     phone="+1 555 345 6789", bio="Frontend dev 🎨")
+_DAVE  = User(id="u4",  name="Dave Brown",     color="#4A2D7A", username="dave_brown",  phone="+1 555 456 7890", bio="DevOps & infra nerd")
+_EVE   = User(id="u5",  name="Eve Wilson",     color="#5E4A1E", username="eve_wilson",  phone="+1 555 567 8901", bio="Loves hiking and coffee ☕")
+_FRANK = User(id="u6",  name="Frank Lee",      color="#1E5E5E", username="franklee",    phone="+82 10-1234-5678", bio="")
+_GRACE = User(id="u7",  name="Grace Kim",      color="#6B1E6B", username="grace_k",     phone="+82 10-9876-5432", bio="UX researcher @ Acme")
 
 _USERS: dict[str, User] = {u.id: u for u in [_ME, _ALICE, _BOB, _CAROL, _DAVE, _EVE, _FRANK, _GRACE]}
 
@@ -447,6 +447,32 @@ class MockClient:
 
     async def open_channel(self, channel_id: str) -> Channel:
         return self.channels[channel_id]
+
+    async def get_channel_info(self, channel_id: str) -> ChannelInfo:
+        await asyncio.sleep(0.05)
+        channel = self.channels[channel_id]
+        is_dm = channel_id.startswith("d")
+
+        if is_dm:
+            dm_user_map = {
+                "d1": _ALICE, "d2": _BOB, "d3": _EVE, "d4": _GRACE,
+            }
+            user = dm_user_map.get(channel_id)
+            return ChannelInfo(channel=channel, is_dm=True, user=user, members_count=2)
+
+        group_members: dict[str, list[User]] = {
+            "g1": [_ME, _ALICE, _BOB, _CAROL, _DAVE],
+            "g2": [_ME, _ALICE, _BOB, _EVE, _FRANK, _GRACE],
+            "g3": [_ME, _CAROL, _EVE, _GRACE],
+            "g4": [_ME, _DAVE, _FRANK, _BOB],
+        }
+        members = group_members.get(channel_id, [_ME])
+        return ChannelInfo(
+            channel=channel,
+            is_dm=False,
+            members=members,
+            members_count=len(members),
+        )
 
     def start_auto_reply(self, channel_id: str) -> None:  # noqa: ARG002
         pass
