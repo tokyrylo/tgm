@@ -26,3 +26,18 @@ class MessageSent(Message):
         super().__init__()
         self.channel_id = channel_id
         self.message = message
+
+
+class MessageDeleted(Message):
+    def __init__(self, channel_id: str, message_id: str) -> None:
+        super().__init__()
+        self.channel_id = channel_id
+        self.message_id = message_id
+
+
+class MessageEdited(Message):
+    def __init__(self, channel_id: str, message_id: str, text: str) -> None:
+        super().__init__()
+        self.channel_id = channel_id
+        self.message_id = message_id
+        self.text = text

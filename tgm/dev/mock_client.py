@@ -9,19 +9,6 @@ from tgm.core.models.channel import Channel, ChannelInfo
 from tgm.core.models.messages import Message
 from tgm.core.models.user import User
 
-# ── users ──────────────────────────────────────────────────────────────────
-
-_ME    = User(id="me",  name="You",            color="text",    username="you",         phone="+1 555 000 0000", bio="")
-_ALICE = User(id="u1",  name="Alice Johnson",  color="#2B5278", username="alice_j",     phone="+44 7911 123456", bio="Product designer at Acme Corp")
-_BOB   = User(id="u2",  name="Bob Smith",      color="#1E6B3A", username="bob_smith",   phone="+1 555 234 5678", bio="Backend engineer · Go & Rust")
-_CAROL = User(id="u3",  name="Carol White",    color="#7A2D2D", username="carol_w",     phone="+1 555 345 6789", bio="Frontend dev 🎨")
-_DAVE  = User(id="u4",  name="Dave Brown",     color="#4A2D7A", username="dave_brown",  phone="+1 555 456 7890", bio="DevOps & infra nerd")
-_EVE   = User(id="u5",  name="Eve Wilson",     color="#5E4A1E", username="eve_wilson",  phone="+1 555 567 8901", bio="Loves hiking and coffee ☕")
-_FRANK = User(id="u6",  name="Frank Lee",      color="#1E5E5E", username="franklee",    phone="+82 10-1234-5678", bio="")
-_GRACE = User(id="u7",  name="Grace Kim",      color="#6B1E6B", username="grace_k",     phone="+82 10-9876-5432", bio="UX researcher @ Acme")
-
-_USERS: dict[str, User] = {u.id: u for u in [_ME, _ALICE, _BOB, _CAROL, _DAVE, _EVE, _FRANK, _GRACE]}
-
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 _now = datetime.now()
@@ -29,6 +16,20 @@ _now = datetime.now()
 
 def _t(**kw) -> datetime:
     return _now - timedelta(**kw)
+
+
+# ── users ──────────────────────────────────────────────────────────────────
+
+_ME    = User(id="me",  name="You",            color="text",    username="you",         phone="+1 555 000 0000", bio="",                             online=True)
+_ALICE = User(id="u1",  name="Alice Johnson",  color="#2B5278", username="alice_j",     phone="+44 7911 123456", bio="Product designer at Acme Corp", online=True)
+_BOB   = User(id="u2",  name="Bob Smith",      color="#1E6B3A", username="bob_smith",   phone="+1 555 234 5678", bio="Backend engineer · Go & Rust",   online=False, last_seen=_now - timedelta(minutes=7))
+_CAROL = User(id="u3",  name="Carol White",    color="#7A2D2D", username="carol_w",     phone="+1 555 345 6789", bio="Frontend dev 🎨",                 online=False, last_seen=_now - timedelta(hours=2))
+_DAVE  = User(id="u4",  name="Dave Brown",     color="#4A2D7A", username="dave_brown",  phone="+1 555 456 7890", bio="DevOps & infra nerd",             online=True)
+_EVE   = User(id="u5",  name="Eve Wilson",     color="#5E4A1E", username="eve_wilson",  phone="+1 555 567 8901", bio="Loves hiking and coffee ☕",      online=False, last_seen=_now - timedelta(days=1, hours=3))
+_FRANK = User(id="u6",  name="Frank Lee",      color="#1E5E5E", username="franklee",    phone="+82 10-1234-5678", bio="",                               online=False, last_seen=_now - timedelta(minutes=34))
+_GRACE = User(id="u7",  name="Grace Kim",      color="#6B1E6B", username="grace_k",     phone="+82 10-9876-5432", bio="UX researcher @ Acme",           online=True)
+
+_USERS: dict[str, User] = {u.id: u for u in [_ME, _ALICE, _BOB, _CAROL, _DAVE, _EVE, _FRANK, _GRACE]}
 
 
 def _msg(
@@ -61,10 +62,10 @@ _CHANNELS: list[Channel] = [
     Channel(id="g2", name="random",         topic="Off-topic, memes, water-cooler",   last_message="haha true 😂",                  unread=2),
     Channel(id="g3", name="design-squad",   topic="UI/UX feedback and assets",        last_message="updated the mockups",           unread=0),
     Channel(id="g4", name="ops-alerts",     topic="Infra & incidents",                last_message="deploy looks stable",           unread=0),
-    Channel(id="d1", name="Alice Johnson",  topic="",                                 last_message="see you there!",                unread=1),
-    Channel(id="d2", name="Bob Smith",      topic="",                                 last_message="yeah let me check",             unread=0),
-    Channel(id="d3", name="Eve Wilson",     topic="",                                 last_message="sounds fun, I'm in",            unread=3),
-    Channel(id="d4", name="Grace Kim",      topic="",                                 last_message="thanks for the review 🙏",      unread=0),
+    Channel(id="d1", name="Alice Johnson",  topic="", last_message="see you there!",           unread=1, is_dm=True, peer_user_id="u1"),
+    Channel(id="d2", name="Bob Smith",      topic="", last_message="yeah let me check",          unread=0, is_dm=True, peer_user_id="u2"),
+    Channel(id="d3", name="Eve Wilson",     topic="", last_message="sounds fun, I'm in",         unread=3, is_dm=True, peer_user_id="u5"),
+    Channel(id="d4", name="Grace Kim",      topic="", last_message="thanks for the review 🙏",   unread=0, is_dm=True, peer_user_id="u7"),
 ]
 
 # ── messages ─────────────────────────────────────────────────────────────────
@@ -304,7 +305,9 @@ class MockClient:
     channels: dict[str, Channel] = {ch.id: ch for ch in _CHANNELS}
     channel_list: list[Channel] = list(_CHANNELS)
     on_new_message: Callable | None = None
+    on_status_change: Callable | None = None
     _main_loop: asyncio.AbstractEventLoop | None = None
+    _status_task_started: bool = False
 
     async def is_authorized(self) -> bool:
         return True
@@ -474,5 +477,35 @@ class MockClient:
             members_count=len(members),
         )
 
+    async def delete_message(self, channel_id: str, message_id: str) -> None:
+        await asyncio.sleep(0.05)
+        msgs = _MESSAGES.get(channel_id, [])
+        _MESSAGES[channel_id] = [m for m in msgs if m.id != message_id]
+
+    async def edit_message(self, channel_id: str, message_id: str, text: str) -> None:
+        await asyncio.sleep(0.05)
+        for msg in _MESSAGES.get(channel_id, []):
+            if msg.id == message_id:
+                msg.text = text
+                break
+
     def start_auto_reply(self, channel_id: str) -> None:  # noqa: ARG002
-        pass
+        if self._main_loop and not self._status_task_started:
+            self._status_task_started = True
+            self._main_loop.create_task(self._simulate_statuses())
+
+    async def _simulate_statuses(self) -> None:
+        dm_user_ids = ["u1", "u2", "u5", "u7"]
+        while True:
+            await asyncio.sleep(random.uniform(10, 20))
+            user_id = random.choice(dm_user_ids)
+            user = _USERS.get(user_id)
+            if not user:
+                continue
+            if user.online:
+                user.online = False
+                user.last_seen = datetime.now()
+            else:
+                user.online = True
+            if self.on_status_change:
+                self.on_status_change(user_id, user.online, user.last_seen)

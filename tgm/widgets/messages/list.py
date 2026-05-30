@@ -8,7 +8,7 @@ from textual.widgets import RichLog
 from tgm.config.themes import ACCENT_THEMES, PALETTE
 from tgm.core.models.messages import Message
 from tgm.core.protocol import ClientProtocol
-from tgm.widgets.input.events import SetReply
+from tgm.widgets.input.events import DeleteMessage, SetEdit, SetReply
 
 from .bubble import Bubble, RenderContext, render_bubble, render_date_sep
 
@@ -60,6 +60,20 @@ class MessageList(RichLog):
         bubble = self._write_bubble(msg, self._search_query, rctx)
         self._rendered.append(bubble)
         self.scroll_end(animate=False)
+
+    def remove_message(self, msg_id: str) -> None:
+        self._msgs = [m for m in self._msgs if m.id != msg_id]
+        self._msgs_by_id.pop(msg_id, None)
+        self._rerender_all()
+
+    def update_message(self, msg_id: str, text: str) -> None:
+        from tgm.widgets.messages.bubble import invalidate_bubble
+        for msg in self._msgs:
+            if msg.id == msg_id:
+                msg.text = text
+                invalidate_bubble(msg_id)
+                break
+        self._rerender_all()
 
     def search(self, query: str) -> tuple[int, int]:
         """Re-render with highlights. Returns (current_match, total_matches)."""
@@ -201,6 +215,20 @@ class MessageList(RichLog):
                 self.post_message(SetReply(self._msgs[self._cursor]))
                 self._cursor = None
                 self._rerender_all()
+        elif key == "e":
+            if self._cursor is not None and self._cursor < len(self._msgs):
+                msg = self._msgs[self._cursor]
+                if msg.out and msg.text:
+                    self.post_message(SetEdit(msg.id, msg.text))
+                    self._cursor = None
+                    self._rerender_all()
+        elif key == "d":
+            if self._cursor is not None and self._cursor < len(self._msgs):
+                msg = self._msgs[self._cursor]
+                if msg.out:
+                    self.post_message(DeleteMessage(msg.id))
+                    self._cursor = None
+                    self._rerender_all()
         elif key == "escape":
             if self._cursor is not None:
                 self._cursor = None

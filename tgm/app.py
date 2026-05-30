@@ -21,7 +21,8 @@ from tgm.config.settings_store import (
 from tgm.core import ClientProtocol
 from tgm.core.models.channel import ChannelSettings
 from tgm.screens import LoginScreen
-from tgm.screens.chat.events import MessageSent, MessagesLoaded, MessagesLoading
+from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessageSent, MessagesLoaded, MessagesLoading
+from tgm.widgets.input.events import DeleteMessage, EditMessage
 from tgm.screens.search.events import ChannelChosen
 from tgm.screens.settings.events import (
     ChannelSettingChanged,
@@ -206,6 +207,40 @@ class TgmApp(App):
     def on_telegram_credentials_save(self, event: TelegramCredentialsSave) -> None:
         _save_telegram(event.api_id, event.api_hash)
 
+    def on_delete_message(self, event: DeleteMessage) -> None:
+        event.stop()
+        if self.current_channel_id:
+            self.run_worker(
+                self._do_delete(self.current_channel_id, event.msg_id),
+                exclusive=False, group="msg-delete",
+            )
+
+    def on_edit_message(self, event: EditMessage) -> None:
+        event.stop()
+        if self.current_channel_id:
+            self.run_worker(
+                self._do_edit(self.current_channel_id, event.msg_id, event.text),
+                exclusive=False, group="msg-edit",
+            )
+
+    async def _do_delete(self, channel_id: str, msg_id: str) -> None:
+        if not self.client:
+            return
+        try:
+            await self.client.delete_message(channel_id, msg_id)
+            self._post_to_chat(MessageDeleted(channel_id, msg_id))
+        except Exception:
+            pass
+
+    async def _do_edit(self, channel_id: str, msg_id: str, text: str) -> None:
+        if not self.client:
+            return
+        try:
+            await self.client.edit_message(channel_id, msg_id, text)
+            self._post_to_chat(MessageEdited(channel_id, msg_id, text))
+        except Exception:
+            pass
+
     def on_channel_chosen(self, event: ChannelChosen) -> None:
         event.stop()
         self.current_channel_id = event.channel_id
@@ -214,6 +249,24 @@ class TgmApp(App):
     def _on_login_done(self) -> None:
         from tgm.screens.chat.screen import ChatScreen
 
-        if self.client and self.client.channel_list:
-            self.current_channel_id = self.client.channel_list[0].id
+        if self.client:
+            self.client.on_status_change = self._on_status_change_cb
+            if self.client.channel_list:
+                self.current_channel_id = self.client.channel_list[0].id
         self.push_screen(ChatScreen())
+
+    def _on_status_change_cb(self, user_id: str, online: bool, last_seen) -> None:
+        self.call_later(self._refresh_status_ui)
+
+    def _refresh_status_ui(self) -> None:
+        from tgm.screens.chat.screen import ChatScreen
+        from tgm.widgets.channels.list import ChannelList
+
+        for screen in self.screen_stack:
+            if isinstance(screen, ChatScreen):
+                try:
+                    screen.query_one(ChannelList).refresh_previews()
+                    screen._refresh_top_bar()
+                except Exception:
+                    pass
+                break

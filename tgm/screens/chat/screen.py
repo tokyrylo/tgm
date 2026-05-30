@@ -11,7 +11,7 @@ from tgm.config.keybindings import get_binding_objects
 from tgm.core.models.messages import Message
 from tgm.core.protocol import ClientProtocol
 from tgm.screens._base import TgmScreen
-from tgm.screens.chat.events import MessageSent, MessagesLoaded, MessagesLoading
+from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessageSent, MessagesLoaded, MessagesLoading
 from tgm.widgets.channels.events import ChannelSelected, CreateChannel
 from tgm.widgets.channels.list import ChannelList
 from tgm.widgets.emoji import EmojiAutocomplete, EmojiPicker
@@ -172,15 +172,36 @@ class ChatScreen(TgmScreen):
         self.query_one(MessageList).append_message(event.message)
         self.ctx.reply_to_msg = None  # type: ignore[misc]
 
+    def on_message_deleted(self, event: MessageDeleted) -> None:
+        event.stop()
+        self.query_one(MessageList).remove_message(event.message_id)
+
+    def on_message_edited(self, event: MessageEdited) -> None:
+        event.stop()
+        self.query_one(MessageList).update_message(event.message_id, event.text)
+
     def _refresh_top_bar(self) -> None:
+        from tgm.core.models.user import format_last_seen
+
         channel_id = self.ctx.current_channel_id
         if not channel_id:
             return
         channel = self.ctx.client.channels.get(channel_id)
-        if channel:
-            self.query_one("#chat-top-bar", Static).update(
-                f"[bold white]{channel.name}[/]\n[dim white]{channel.topic}[/]"
-            )
+        if not channel:
+            return
+        if channel.is_dm and channel.peer_user_id:
+            user = self.ctx.client.users.get(channel.peer_user_id)
+            if user:
+                status = format_last_seen(user)
+                color = "green" if user.online else "dim white"
+                subtitle = f"[{color}]{status}[/]"
+            else:
+                subtitle = ""
+        else:
+            subtitle = f"[dim white]{channel.topic}[/]"
+        self.query_one("#chat-top-bar", Static).update(
+            f"[bold white]{channel.name}[/]\n{subtitle}"
+        )
 
     def _show_spinner(self, show: bool) -> None:
         self.query_one("#msg-spinner", LoadingIndicator).display = show

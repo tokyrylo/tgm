@@ -7,6 +7,7 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Button, Static
 
 from tgm.core.models.channel import ChannelInfo
+from tgm.core.models.user import format_last_seen
 from tgm.core.protocol import ClientProtocol
 from tgm.screens._base import TgmModalScreen
 
@@ -52,7 +53,10 @@ class ChannelInfoModal(TgmModalScreen[None]):
             self.query_one("#ci-name", Static).update(f"[bold white]{u.name}[/]")
             handle = f"@{u.username}" if u.username else ""
             self.query_one("#ci-subtitle", Static).update(f"[dim]{handle}[/]")
+            status = format_last_seen(u)
+            status_color = "green" if u.online else "dim white"
             await self._mount_info_rows([
+                ("Status", f"[{status_color}]{status}[/]"),
                 ("Phone",  u.phone or "—"),
                 ("Bio",    u.bio   or "—"),
             ])

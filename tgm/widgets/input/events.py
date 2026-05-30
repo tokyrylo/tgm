@@ -30,3 +30,27 @@ class ClearReply(InputBarEvent):
 
 class AttachFile(InputBarEvent):
     pass
+
+
+class SetEdit(InputBarEvent):
+    def __init__(self, msg_id: str, text: str) -> None:
+        super().__init__()
+        self.msg_id = msg_id
+        self.text = text
+
+
+class ClearEdit(InputBarEvent):
+    pass
+
+
+class EditMessage(InputBarEvent):
+    def __init__(self, msg_id: str, text: str) -> None:
+        super().__init__()
+        self.msg_id = msg_id
+        self.text = text
+
+
+class DeleteMessage(InputBarEvent):
+    def __init__(self, msg_id: str) -> None:
+        super().__init__()
+        self.msg_id = msg_id

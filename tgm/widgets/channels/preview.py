@@ -18,6 +18,7 @@ _UNSET = object()  # sentinel: "never computed yet"
 
 class AppContext(Protocol):
     accent_theme: str
+    client: Any
 
 
 def _stable_color(channel_id: str) -> str:
@@ -37,6 +38,7 @@ class ChannelPreview(ListItem):
         self._c_last_raw: str = ""
         self._c_unread: int = -1
         self._c_accent: str | None = None
+        self._c_online: bool | None = None
 
     @property
     def ctx(self) -> AppContext:
@@ -68,6 +70,15 @@ class ChannelPreview(ListItem):
                 return result
         return placeholder_avatar_markup(_stable_color(self.channel.id), cols=4, rows=3)
 
+    def _peer_online(self) -> bool:
+        if not self.channel.is_dm or not self.channel.peer_user_id:
+            return False
+        client = self.ctx.client
+        if not client:
+            return False
+        user = client.users.get(self.channel.peer_user_id)
+        return bool(user and user.online)
+
     def _format_last(self) -> str:
         last = self.channel.last_message or "No messages yet"
         return last[:_LAST_MAX_LEN] + "…" if len(last) > _LAST_MAX_LEN else last
@@ -85,9 +96,12 @@ class ChannelPreview(ListItem):
             self._avatar_source = source
 
         name = self.channel.name
-        if name != self._c_name_raw:
-            self._name_w.update(f"[bold white]{name}[/]")
+        online = self._peer_online()
+        if name != self._c_name_raw or online != self._c_online:
+            dot = " [green]●[/]" if online else ""
+            self._name_w.update(f"[bold white]{name}[/]{dot}")
             self._c_name_raw = name
+            self._c_online = online
 
         last = self._format_last()
         if last != self._c_last_raw:

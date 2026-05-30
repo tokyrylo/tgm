@@ -10,7 +10,7 @@ from textual.widgets import Button, Input
 
 from tgm.config.themes import PALETTE
 
-from .events import AttachFile, ClearReply, Reply, SendMessage, SetReply
+from .events import AttachFile, ClearEdit, ClearReply, EditMessage, Reply, SendMessage, SetEdit, SetReply
 from .reply_bar import ReplyBar
 
 if TYPE_CHECKING:
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 INPUT_ID = "message-input"
 REPLY_BAR_ID = "reply-bar"
+EDIT_BAR_ID = "edit-bar"
 EMOJI_AC_ID = "emoji-ac"
 
 
@@ -43,6 +44,7 @@ class InputBar(Horizontal):
 
     def compose(self) -> ComposeResult:
         yield ReplyBar(id=REPLY_BAR_ID, classes="reply-bar")
+        yield ReplyBar(id=EDIT_BAR_ID, classes="reply-bar")
         yield Input(
             placeholder=f"Message... (type {self.ctx.emoji_trigger} for emoji)",
             id=INPUT_ID,
@@ -53,6 +55,8 @@ class InputBar(Horizontal):
     def on_mount(self) -> None:
         self._input: Input = self.query_one(f"#{INPUT_ID}", Input)
         self._reply_bar: ReplyBar = self.query_one(f"#{REPLY_BAR_ID}", ReplyBar)
+        self._edit_bar: ReplyBar = self.query_one(f"#{EDIT_BAR_ID}", ReplyBar)
+        self._editing_msg_id: str | None = None
         self._ac: _EmojiAC | None = self._safe_get_ac()
         self._ac_debounce: Timer | None = None
         self._ac_seq: int = 0
@@ -72,6 +76,22 @@ class InputBar(Horizontal):
 
     def on_clear_reply(self, _: ClearReply) -> None:
         self._update_reply(None)
+
+    def on_set_edit(self, event: SetEdit) -> None:
+        event.stop()
+        self._editing_msg_id = event.msg_id
+        self._edit_bar.show(
+            f"[bold yellow]✏ Editing[/]  [dim white]{event.text[:60].replace('[', '[[').replace(']', ']]')}[/]"
+            "  [dim](Esc to cancel)[/]"
+        )
+        self._input.value = event.text
+        self._input.cursor_position = len(event.text)
+        self._input.focus()
+
+    def on_clear_edit(self, _: ClearEdit) -> None:
+        self._editing_msg_id = None
+        self._edit_bar.show(None)
+        self._input.clear()
 
     def _update_reply(self, reply: Reply | None) -> None:
         self._reply_bar.show(self._format_reply(reply) if reply else None)
@@ -97,8 +117,14 @@ class InputBar(Horizontal):
         text = text.strip()
         if not text:
             return
-        self.post_message(SendMessage(text))
-        self._input.clear()
+        if self._editing_msg_id:
+            self.post_message(EditMessage(self._editing_msg_id, text))
+            self._editing_msg_id = None
+            self._edit_bar.show(None)
+            self._input.clear()
+        else:
+            self.post_message(SendMessage(text))
+            self._input.clear()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         ac = self._get_ac()
@@ -186,6 +212,10 @@ class InputBar(Horizontal):
         return False
 
     def _handle_reply_escape(self, event) -> bool:
+        if self._editing_msg_id:
+            self.post_message(ClearEdit())
+            event.stop()
+            return True
         if self.ctx.reply_to_msg:
             self.post_message(ClearReply())
             event.stop()

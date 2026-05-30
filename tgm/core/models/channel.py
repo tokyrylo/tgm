@@ -14,6 +14,8 @@ class Channel:
     topic: str = ""
     last_message: str = ""
     unread: int = 0
+    is_dm: bool = False
+    peer_user_id: str | None = None
 
 
 @dataclass
