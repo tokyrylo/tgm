@@ -79,11 +79,23 @@ ChannelPreview {
     height: 1fr;
 }
 
+#chat-header {
+    height: auto;
+    background: $bg_surface;
+    border-bottom: solid $border;
+}
+
 #chat-top-bar {
     height: 2;
-    background: $bg_surface;
     padding: 0 1;
-    border-bottom: solid $border;
+}
+
+#pinned-bar {
+    display: none;
+    height: 1;
+    border-top: solid $border;
+    padding: 0 1;
+    color: white;
 }
 
 #msg-spinner {
@@ -264,6 +276,47 @@ GlobalSearchScreen {
 
 #gs-hint {
     height: 1;
+}
+
+/* ── file picker modal ───────────────────────────────────────────────────── */
+
+FilePicker {
+    align: center middle;
+}
+
+#fp-container {
+    width: 70;
+    height: 28;
+    background: $bg_surface;
+    border: solid $border;
+}
+
+#fp-path {
+    height: 1;
+    background: $bg_avatar;
+    padding: 0 1;
+    border-bottom: solid $border;
+}
+
+#fp-list {
+    height: 1fr;
+}
+
+#fp-footer {
+    height: 3;
+    border-top: solid $border;
+    padding: 0 1;
+    align: left middle;
+}
+
+#fp-selected {
+    width: 1fr;
+    height: 1fr;
+    content-align: left middle;
+}
+
+#fp-cancel {
+    width: auto;
 }
 
 /* ── channel info modal ──────────────────────────────────────────────────── */

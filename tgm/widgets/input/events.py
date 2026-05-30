@@ -54,3 +54,9 @@ class DeleteMessage(InputBarEvent):
     def __init__(self, msg_id: str) -> None:
         super().__init__()
         self.msg_id = msg_id
+
+
+class TogglePinMessage(InputBarEvent):
+    def __init__(self, msg_id: str) -> None:
+        super().__init__()
+        self.msg_id = msg_id
