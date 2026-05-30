@@ -1,19 +1,53 @@
+from __future__ import annotations
+
 import asyncio
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from textual.app import App
 
+from tgm.config.settings_store import load_global as _load_global
 from tgm.core import ClientProtocol
 from tgm.screens import LoginScreen
-from tgm.screens.login.events import CodeSubmitted, PasswordSubmitted, PhoneSubmitted, SmsRequested
+from tgm.screens.login.events import (
+    CodeSubmitted,
+    PasswordSubmitted,
+    PhoneSubmitted,
+    SmsRequested,
+)
+
+if TYPE_CHECKING:
+    from tgm.core.models.channel import Channel
+    from tgm.core.models.messages import Message
+
+
+_STYLE = Path(__file__).parent / "static" / "styles" / "style.tcss"
 
 
 class TgmApp(App):
+    CSS_PATH = _STYLE
 
     def __init__(self) -> None:
         super().__init__()
         self.client: ClientProtocol | None = None
+        self.current_channel_id: str | None = None
+        self.reply_to_msg: Message | None = None
+        self._skip_login: bool = False
+
+        s = _load_global()
+        self.emoji_trigger: str = s["emoji_trigger"]
+        self.enter_to_send: bool = s["enter_to_send"]
+        self.show_timestamps: bool = s["show_timestamps"]
+        self.accent_theme: str = s["accent_theme"]
+        self.big_msg_threshold: int = s["big_msg_threshold"]
+
+    @property
+    def channels(self) -> list[Channel]:
+        return self.client.channel_list if self.client else []
 
     def on_mount(self) -> None:
+        if self._skip_login:
+            return
         loading = self.client is not None
         if self.client:
             self.client._main_loop = asyncio.get_event_loop()
@@ -74,5 +108,8 @@ class TgmApp(App):
             self._login_screen().show_error(str(e))
 
     def _on_login_done(self) -> None:
-        # TODO: push chat screen
-        pass
+        from tgm.screens.chat.screen import ChatScreen
+
+        if self.client and self.client.channel_list:
+            self.current_channel_id = self.client.channel_list[0].id
+        self.push_screen(ChatScreen())

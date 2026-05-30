@@ -8,6 +8,8 @@ from textual.containers import Horizontal
 from textual.css.query import NoMatches
 from textual.widgets import Button, Input
 
+from tgm.config.themes import PALETTE
+
 from .events import AttachFile, ClearReply, Reply, SendMessage, SetReply
 from .reply_bar import ReplyBar
 
@@ -79,7 +81,7 @@ class InputBar(Horizontal):
         preview = reply.text[:60] if reply.text else "[Photo]"
         preview = preview.replace("[", "[[").replace("]", "]]")
         return (
-            f"[dim #6DB2FF]▎ Reply to [bold]{sender}[/][/] "
+            f"[dim {PALETTE['reply']}]▎ Reply to [bold]{sender}[/][/] "
             f"[dim white]{preview}[/]  [dim](Esc to cancel)[/]"
         )
 

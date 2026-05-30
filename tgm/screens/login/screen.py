@@ -5,7 +5,12 @@ from textual.reactive import reactive
 from textual.widgets import Button, Input, LoadingIndicator, Static
 
 from tgm.screens._base import TgmScreen
-from tgm.screens.login.events import CodeSubmitted, PasswordSubmitted, PhoneSubmitted, SmsRequested
+from tgm.screens.login.events import (
+    CodeSubmitted,
+    PasswordSubmitted,
+    PhoneSubmitted,
+    SmsRequested,
+)
 from tgm.screens.login.steps import CodeStep, LoginStep, PasswordStep, PhoneStep
 
 
@@ -135,7 +140,9 @@ class LoginScreen(TgmScreen):
         self.step = CodeStep(phone=phone)
 
     def advance_to_password(self) -> None:
-        phone = self.step.phone if isinstance(self.step, (CodeStep, PasswordStep)) else ""
+        phone = (
+            self.step.phone if isinstance(self.step, (CodeStep, PasswordStep)) else ""
+        )
         self.step = PasswordStep(phone=phone)
 
     def show_error(self, error: str) -> None:
