@@ -119,8 +119,81 @@ ChannelPreview {
 /* ── emoji autocomplete ─────────────────────────────────────────────────── */
 
 EmojiAutocomplete {
+    height: 1;
+    width: 1fr;
+    background: #1C2B3A;
+    border: none;
     display: none;
-    height: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+EmojiAutocomplete.visible {
+    display: block;
+}
+
+EmojiAutocomplete > Static {
+    padding: 0 1;
+    color: #fff;
+}
+
+EmojiAutocomplete > Static.highlighted {
+    background: $accent;
+}
+
+/* ── emoji picker ───────────────────────────────────────────────────────── */
+
+EmojiPicker {
+    align: center middle;
+}
+
+#emoji-picker-container {
+    width: 50;
+    height: 24;
+    background: $bg_surface;
+    border: solid $border;
+    padding: 1;
+}
+
+#emoji-categories {
+    height: 3;
+    padding: 0 1;
+    border-bottom: solid $border;
+}
+
+.emoji-cat-btn {
+    width: auto;
+    padding: 0 1;
+    content-align: center middle;
+    color: #888;
+}
+
+.emoji-cat-btn.selected {
+    color: #fff;
+    background: $accent;
+}
+
+#emoji-grid {
+    height: 1fr;
+    grid-size: 8;
+    grid-rows: 2;
+    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    overflow-y: auto;
+}
+
+.emoji-cell {
+    content-align: center middle;
+    padding: 0 1;
+}
+
+.emoji-cell.selected {
+    background: $accent;
+}
+
+#emoji-hint {
+    height: 1;
+    padding: 0 1;
+    border-top: solid $border;
 }
 
 /* ── search bar ─────────────────────────────────────────────────────────── */

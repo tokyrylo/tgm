@@ -12,7 +12,7 @@ from tgm.core.protocol import ClientProtocol
 from tgm.screens._base import TgmScreen
 from tgm.widgets.channels.events import ChannelSelected, CreateChannel
 from tgm.widgets.channels.list import ChannelList
-from tgm.widgets.emoji_ac import EmojiAutocomplete
+from tgm.widgets.emoji import EmojiAutocomplete, EmojiPicker
 from tgm.widgets.input.bar import InputBar
 from tgm.widgets.input.events import ClearReply, SendMessage
 from tgm.widgets.messages.list import MessageList
@@ -61,7 +61,11 @@ class ChatScreen(TgmScreen):
         webbrowser.open(url)
 
     def action_open_emoji_picker(self) -> None:
-        pass
+        def on_dismiss(emoji: str | None) -> None:
+            if emoji:
+                self.query_one(InputBar).insert_emoji(emoji)
+
+        self.app.push_screen(EmojiPicker(), on_dismiss)
 
     def action_toggle_search(self) -> None:
         bar = self.query_one(SearchBar)

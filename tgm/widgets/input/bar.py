@@ -105,7 +105,7 @@ class InputBar(Horizontal):
         if ac and ac.is_showing:
             emoji = ac.get_selected_emoji()
             if emoji:
-                self._insert_emoji(emoji)
+                self.insert_emoji(emoji)
             event.stop()
             return
         if self.ctx.enter_to_send:
@@ -132,7 +132,7 @@ class InputBar(Horizontal):
 
     def _safe_get_ac(self) -> _EmojiAC | None:
         try:
-            return cast(_EmojiAC, self.app.query_one(f"#{EMOJI_AC_ID}"))
+            return cast(_EmojiAC, self.screen.query_one(f"#{EMOJI_AC_ID}"))
         except NoMatches:
             return None
 
@@ -142,7 +142,7 @@ class InputBar(Horizontal):
             self._ac = ac
         return ac
 
-    def _insert_emoji(self, emoji: str) -> None:
+    def insert_emoji(self, emoji: str) -> None:
         value = self._input.value
         cursor = self._input.cursor_position
         prefix = value[:cursor]
@@ -150,8 +150,12 @@ class InputBar(Horizontal):
         if match:
             idx = match.start()
             new_value = value[:idx] + emoji + value[cursor:]
-            self._input.value = new_value
-            self._input.cursor_position = idx + len(emoji)
+            new_cursor = idx + len(emoji)
+        else:
+            new_value = value[:cursor] + emoji + value[cursor:]
+            new_cursor = cursor + len(emoji)
+        self._input.value = new_value
+        self._input.cursor_position = new_cursor
         ac = self._get_ac()
         if ac:
             ac.hide()
