@@ -1,0 +1,323 @@
+/* Palette — matches PALETTE in tgm/config/themes.py */
+$border:      #1e2a35;
+$bg_surface:  #182533;
+$bg_avatar:   #0E1621;
+$accent:      #2B5278;
+
+/* ── layout ────────────────────────────────────────────────────────────── */
+
+Screen {
+    layers: base overlay;
+}
+
+/* ── sidebar ────────────────────────────────────────────────────────────── */
+
+#channel-list {
+    width: 26;
+    height: 1fr;
+    border-right: solid $border;
+}
+
+.sidebar-header {
+    height: 3;
+    background: $bg_surface;
+    padding: 0 1;
+    border-bottom: solid $border;
+}
+
+.sidebar-title {
+    width: 1fr;
+    height: 1fr;
+    content-align: left middle;
+}
+
+#add-channel-btn {
+    width: auto;
+    min-width: 3;
+    height: 1;
+    border: none;
+}
+
+#channel-items {
+    height: 1fr;
+}
+
+ChannelPreview {
+    height: 3;
+    padding: 0 1;
+}
+
+.channel-avatar {
+    width: 6;
+    height: 3;
+    content-align: center middle;
+}
+
+.channel-info {
+    width: 1fr;
+    height: 3;
+}
+
+.channel-name {
+    height: 1;
+}
+
+.channel-last {
+    height: 1;
+}
+
+.channel-badge {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+}
+
+/* ── chat area ──────────────────────────────────────────────────────────── */
+
+#chat-area {
+    width: 1fr;
+    height: 1fr;
+}
+
+#chat-top-bar {
+    height: 2;
+    background: $bg_surface;
+    padding: 0 1;
+    border-bottom: solid $border;
+}
+
+#msg-spinner {
+    height: 1;
+}
+
+#message-list {
+    height: 1fr;
+}
+
+/* ── input ──────────────────────────────────────────────────────────────── */
+
+#input-bar {
+    height: auto;
+    border-top: solid $border;
+    padding: 0 1;
+}
+
+#input-bar Input {
+    width: 1fr;
+}
+
+#attach-btn, #send-btn {
+    width: auto;
+    min-width: 10;
+}
+
+.reply-bar {
+    height: auto;
+    display: none;
+}
+
+/* ── emoji autocomplete ─────────────────────────────────────────────────── */
+
+EmojiAutocomplete {
+    height: 1;
+    width: 1fr;
+    background: #1C2B3A;
+    border: none;
+    display: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+EmojiAutocomplete.visible {
+    display: block;
+}
+
+EmojiAutocomplete > Static {
+    padding: 0 1;
+    color: #fff;
+}
+
+EmojiAutocomplete > Static.highlighted {
+    background: $accent;
+}
+
+/* ── emoji picker ───────────────────────────────────────────────────────── */
+
+EmojiPicker {
+    align: center middle;
+}
+
+#emoji-picker-container {
+    width: 50;
+    height: 24;
+    background: $bg_surface;
+    border: solid $border;
+    padding: 1;
+}
+
+#emoji-categories {
+    height: 3;
+    padding: 0 1;
+    border-bottom: solid $border;
+}
+
+.emoji-cat-btn {
+    width: auto;
+    padding: 0 1;
+    content-align: center middle;
+    color: #888;
+}
+
+.emoji-cat-btn.selected {
+    color: #fff;
+    background: $accent;
+}
+
+#emoji-grid {
+    height: 1fr;
+    grid-size: 8;
+    grid-rows: 2;
+    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    overflow-y: auto;
+}
+
+.emoji-cell {
+    content-align: center middle;
+    padding: 0 1;
+}
+
+.emoji-cell.selected {
+    background: $accent;
+}
+
+#emoji-hint {
+    height: 1;
+    padding: 0 1;
+    border-top: solid $border;
+}
+
+/* ── search bar ─────────────────────────────────────────────────────────── */
+
+SearchBar {
+    display: none;
+    height: 3;
+}
+
+SearchBar Horizontal {
+    height: 1fr;
+}
+
+SearchBar #search-count {
+    width: auto;
+    padding: 0 1;
+}
+
+/* ── login ──────────────────────────────────────────────────────────────── */
+
+#login-box {
+    width: 50;
+    height: auto;
+    padding: 2 4;
+    border: solid $border;
+    background: $bg_surface;
+}
+
+#login-title {
+    text-align: center;
+    padding-bottom: 1;
+}
+
+#login-subtitle {
+    text-align: center;
+    padding-bottom: 1;
+}
+
+#login-error {
+    text-align: center;
+    height: auto;
+}
+
+LoginError {
+    height: auto;
+    padding: 0 0 1 0;
+}
+
+GlobalSearchScreen {
+    align: center middle;
+}
+
+#gs-container {
+    width: 60;
+    height: 20;
+    background: #182533;
+    border: solid #1e2a35;
+    padding: 1;
+}
+
+#gs-input {
+    margin-bottom: 1;
+}
+
+#gs-results {
+    height: 1fr;
+}
+
+#gs-hint {
+    height: 1;
+}
+
+/* ── channel info modal ──────────────────────────────────────────────────── */
+
+ChannelInfoModal {
+    align: center middle;
+}
+
+#ci-container {
+    width: 44;
+    height: auto;
+    max-height: 30;
+    background: $bg_surface;
+    border: solid $border;
+    padding: 1 2;
+}
+
+#ci-avatar {
+    text-align: center;
+    padding: 1 0;
+}
+
+#ci-name {
+    text-align: center;
+    padding-bottom: 0;
+}
+
+#ci-subtitle {
+    text-align: center;
+    padding-bottom: 1;
+}
+
+#ci-body {
+    height: auto;
+    max-height: 14;
+    border-top: solid $border;
+    padding-top: 1;
+}
+
+.ci-label {
+    color: #888;
+    height: 1;
+}
+
+.ci-value {
+    height: auto;
+    padding-bottom: 0;
+}
+
+.ci-spacer {
+    height: 1;
+}
+
+#ci-close {
+    margin-top: 1;
+    width: 1fr;
+}
