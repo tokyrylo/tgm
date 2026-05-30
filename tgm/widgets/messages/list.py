@@ -41,12 +41,13 @@ class MessageList(RichLog):
     # ── public API ────────────────────────────────────────────────────────────
 
     def load_messages(self, messages: list[Message]) -> None:
-        self.clear()
         self._cursor = None
         self._msgs = list(messages)
         self._msgs_by_id = {m.id: m for m in messages}
         self._rendered = []
-        self._render_all(self._msgs, self._search_query)
+        with self.app.batch_update():
+            self.clear()
+            self._render_all(self._msgs, self._search_query)
         self.scroll_end(animate=False)
 
     def append_message(self, msg: Message) -> None:
@@ -87,8 +88,9 @@ class MessageList(RichLog):
                 i for i, m in enumerate(self._msgs) if m.text and q in m.text.lower()
             ]
 
-        self.clear()
-        self._render_all(self._msgs, query)
+        with self.app.batch_update():
+            self.clear()
+            self._render_all(self._msgs, query)
 
         if self._match_indices:
             self._current_match = 0
@@ -167,16 +169,17 @@ class MessageList(RichLog):
 
     def _rerender_all(self) -> None:
         rctx = self._render_ctx()
-        self.clear()
-        self._rendered = []
-        last_date: date_cls | None = None
-        for i, msg in enumerate(self._msgs):
-            msg_date = msg.timestamp.date()
-            if last_date != msg_date:
-                self.write(render_date_sep(msg.timestamp, rctx.width))
-                last_date = msg_date
-            bubble = self._write_bubble(msg, self._search_query, rctx, is_cursor=(i == self._cursor))
-            self._rendered.append(bubble)
+        with self.app.batch_update():
+            self.clear()
+            self._rendered = []
+            last_date: date_cls | None = None
+            for i, msg in enumerate(self._msgs):
+                msg_date = msg.timestamp.date()
+                if last_date != msg_date:
+                    self.write(render_date_sep(msg.timestamp, rctx.width))
+                    last_date = msg_date
+                bubble = self._write_bubble(msg, self._search_query, rctx, is_cursor=(i == self._cursor))
+                self._rendered.append(bubble)
 
     def _scroll_to_cursor(self) -> None:
         if self._cursor is None or not self._rendered:

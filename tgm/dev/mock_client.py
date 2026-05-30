@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import random
 from datetime import datetime, timedelta
-from typing import Callable
 
+from tgm.core.client_events import ClientEvent, NewMessageEvent, StatusChangeEvent
 from tgm.core.models.channel import Channel, ChannelInfo
 from tgm.core.models.messages import Message
 from tgm.core.models.user import User
+from tgm.core.store import Store
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ def _t(**kw) -> datetime:
     return _now - timedelta(**kw)
 
 
-# ── users ──────────────────────────────────────────────────────────────────
+# ── users ────────────────────────────────────────────────────────────────────
 
 _ME    = User(id="me",  name="You",            color="text",    username="you",         phone="+1 555 000 0000", bio="",                             online=True)
 _ALICE = User(id="u1",  name="Alice Johnson",  color="#2B5278", username="alice_j",     phone="+44 7911 123456", bio="Product designer at Acme Corp", online=True)
@@ -55,7 +56,7 @@ def _msg(
     )
 
 
-# ── channels ────────────────────────────────────────────────────────────────
+# ── channels ─────────────────────────────────────────────────────────────────
 
 _CHANNELS: list[Channel] = [
     Channel(id="g1", name="dev-team",       topic="Engineering discussions",          last_message="ship it 🚢",                    unread=5, pinned_message_id="g1-9"),
@@ -68,7 +69,7 @@ _CHANNELS: list[Channel] = [
     Channel(id="d4", name="Grace Kim",      topic="", last_message="thanks for the review 🙏",   unread=0, is_dm=True, peer_user_id="u7"),
 ]
 
-# ── messages ─────────────────────────────────────────────────────────────────
+# ── messages ──────────────────────────────────────────────────────────────────
 
 _MESSAGES: dict[str, list[Message]] = {
 
@@ -149,7 +150,7 @@ _MESSAGES: dict[str, list[Message]] = {
         _msg("g4-12", _DAVE,  "deploy looks stable", "g4", _t(minutes=30)),
     ],
 
-    # ── Alice DM ──────────────────────────────────────────────────────────────
+    # ── Alice DM ─────────────────────────────────────────────────────────────
     "d1": [
         _msg("d1-1",  _ALICE, "hey! are you coming to the team offsite next month?", "d1", _t(days=3)),
         _msg("d1-2",  _ME,    "yes! booked flights already", "d1", _t(days=3), out=True),
@@ -210,78 +211,12 @@ _MESSAGES: dict[str, list[Message]] = {
 # ── auto-reply pools ──────────────────────────────────────────────────────────
 
 _AUTO_REPLIES: dict[str, list[str]] = {
-    "d1": [  # Alice
-        "haha totally agree",
-        "good point!",
-        "let me think about that...",
-        "yeah sounds good to me",
-        "👍",
-        "interesting, I hadn't considered that",
-        "makes sense!",
-        "I'll check and get back to you",
-        "LOL yes exactly",
-        "that's a great idea actually",
-    ],
-    "d2": [  # Bob
-        "yeah let me check",
-        "makes sense",
-        "on it",
-        "roger that",
-        "hmm good point",
-        "I'll push a fix shortly",
-        "can you share more context?",
-        "noted",
-        "checked, should be working now",
-        "👀",
-    ],
-    "d3": [  # Eve
-        "haha yes!!",
-        "omg same",
-        "that's so fun!",
-        "can't wait 🎉",
-        "sounds perfect",
-        "I'm down",
-        "yesss",
-        "oh wow really?",
-        "love that idea",
-        "🙌",
-    ],
-    "d4": [  # Grace
-        "thanks!",
-        "good catch",
-        "will fix",
-        "noted, updating the design",
-        "great feedback",
-        "on it 🎨",
-        "appreciate it!",
-        "checking now",
-        "done!",
-        "makes total sense",
-    ],
-    "g1": [  # dev-team group replies
-        "nice",
-        "👍",
-        "lgtm",
-        "on it",
-        "makes sense",
-        "good call",
-        "agreed",
-        "let's do it",
-        "🚀",
-        "shipped",
-    ],
-    "g2": [  # random group replies
-        "lmaooo",
-        "so true",
-        "🤣",
-        "same",
-        "+1",
-        "classic",
-        "haha",
-        "no way",
-        "facts",
-        "this is the way",
-    ],
+    "d1": ["haha totally agree", "good point!", "let me think about that...", "yeah sounds good to me", "👍", "interesting, I hadn't considered that", "makes sense!", "I'll check and get back to you", "LOL yes exactly", "that's a great idea actually"],
+    "d2": ["yeah let me check", "makes sense", "on it", "roger that", "hmm good point", "I'll push a fix shortly", "can you share more context?", "noted", "checked, should be working now", "👀"],
+    "d3": ["haha yes!!", "omg same", "that's so fun!", "can't wait 🎉", "sounds perfect", "I'm down", "yesss", "oh wow really?", "love that idea", "🙌"],
+    "d4": ["thanks!", "good catch", "will fix", "noted, updating the design", "great feedback", "on it 🎨", "appreciate it!", "checking now", "done!", "makes total sense"],
+    "g1": ["nice", "👍", "lgtm", "on it", "makes sense", "good call", "agreed", "let's do it", "🚀", "shipped"],
+    "g2": ["lmaooo", "so true", "🤣", "same", "+1", "classic", "haha", "no way", "facts", "this is the way"],
 }
 
 _AUTO_REPLY_USERS: dict[str, list[User]] = {
@@ -299,15 +234,40 @@ _msg_counter = sum(len(v) for v in _MESSAGES.values())
 
 
 class MockClient:
-    current_user: User | None = _ME
-    current_user_id: str | None = "me"
-    users: dict[str, User] = _USERS
-    channels: dict[str, Channel] = {ch.id: ch for ch in _CHANNELS}
-    channel_list: list[Channel] = list(_CHANNELS)
-    on_new_message: Callable | None = None
-    on_status_change: Callable | None = None
-    _main_loop: asyncio.AbstractEventLoop | None = None
-    _status_task_started: bool = False
+    def __init__(self) -> None:
+        self.store = Store(
+            users=dict(_USERS),
+            channels={ch.id: ch for ch in _CHANNELS},
+            channel_list=list(_CHANNELS),
+            current_user=_ME,
+            current_user_id="me",
+        )
+        self.event_queue: asyncio.Queue[ClientEvent] = asyncio.Queue()
+        self._status_task_started = False
+
+    # ── Store convenience accessors (protocol requirement) ───────────────────
+
+    @property
+    def users(self) -> dict[str, User]:
+        return self.store.users
+
+    @property
+    def channels(self) -> dict[str, Channel]:
+        return self.store.channels
+
+    @property
+    def channel_list(self) -> list[Channel]:
+        return self.store.channel_list
+
+    @property
+    def current_user(self) -> User | None:
+        return self.store.current_user
+
+    @property
+    def current_user_id(self) -> str | None:
+        return self.store.current_user_id
+
+    # ── auth ─────────────────────────────────────────────────────────────────
 
     async def is_authorized(self) -> bool:
         return True
@@ -318,26 +278,32 @@ class MockClient:
     async def reset_session(self) -> None:
         pass
 
-    async def send_code(self, phone: str) -> None:  # noqa: ARG002
+    async def send_code(self, phone: str) -> None:
         pass
 
-    async def resend_code_sms(self, phone: str) -> None:  # noqa: ARG002
+    async def resend_code_sms(self, phone: str) -> None:
         pass
 
-    async def sign_in(self, phone: str, code: str) -> User:  # noqa: ARG002
+    async def sign_in(self, phone: str, code: str) -> User:
         return _ME
 
-    async def sign_in_with_password(self, password: str) -> User:  # noqa: ARG002
+    async def sign_in_with_password(self, password: str) -> User:
         return _ME
 
-    async def load_dialogs(self, limit: int = 100) -> None:  # noqa: ARG002
-        pass
+    # ── lifecycle ────────────────────────────────────────────────────────────
+
+    async def load_dialogs(self, limit: int = 100) -> None:
+        if not self._status_task_started:
+            self._status_task_started = True
+            asyncio.ensure_future(self._simulate_statuses())
 
     async def disconnect(self) -> None:
         pass
 
+    # ── messaging ────────────────────────────────────────────────────────────
+
     async def get_channel_messages(
-        self, channel_id: str, limit: int = 50  # noqa: ARG002
+        self, channel_id: str, limit: int = 50
     ) -> list[Message]:
         await asyncio.sleep(0.05)
         return list(_MESSAGES.get(channel_id, []))
@@ -362,7 +328,7 @@ class MockClient:
             reply_to_msg_id=reply_to_msg_id,
         )
         _MESSAGES.setdefault(channel_id, []).append(msg)
-        ch = self.channels.get(channel_id)
+        ch = self.store.channels.get(channel_id)
         if ch:
             ch.last_message = text
 
@@ -375,8 +341,6 @@ class MockClient:
         return msg
 
     async def _auto_reply(self, channel_id: str) -> None:
-        if not self.on_new_message:
-            return
         users = _AUTO_REPLY_USERS.get(channel_id, [])
         pool = _AUTO_REPLIES.get(channel_id, ["👍"])
         if not users:
@@ -396,35 +360,37 @@ class MockClient:
             read=False,
         )
         _MESSAGES.setdefault(channel_id, []).append(msg)
-        ch = self.channels.get(channel_id)
+        ch = self.store.channels.get(channel_id)
         if ch:
             ch.last_message = text
             ch.unread += 1
-        self.on_new_message(msg)
+        self.event_queue.put_nowait(NewMessageEvent(msg))
 
     async def send_file(
         self,
         channel_id: str,
         file_path: str,
         caption: str = "",
-        reply_to_msg_ud: str | None = None,  # noqa: ARG002
+        reply_to_msg_ud: str | None = None,
     ) -> Message:
         return await self.add_message(f"[File: {file_path}] {caption}", channel_id)
 
     async def mark_as_read(self, channel_id: str) -> None:
-        ch = self.channels.get(channel_id)
+        ch = self.store.channels.get(channel_id)
         if ch:
             ch.unread = 0
 
     async def forward_message(
-        self, from_channel_id: str, to_channel_id: str, message_id: str  # noqa: ARG002
+        self, from_channel_id: str, to_channel_id: str, message_id: str
     ) -> None:
         pass
 
+    # ── channels ─────────────────────────────────────────────────────────────
+
     async def create_group(self, title: str) -> Channel:
         ch = Channel(id=f"new-{title}", name=title, topic="")
-        self.channels[ch.id] = ch
-        self.channel_list.append(ch)
+        self.store.channels[ch.id] = ch
+        self.store.channel_list.append(ch)
         return ch
 
     async def search_global(self, query: str, limit: int = 20) -> list[Channel]:
@@ -442,24 +408,22 @@ class MockClient:
             if channel_id in seen:
                 continue
             if any(msg.text and q in msg.text.lower() for msg in messages):
-                ch = self.channels.get(channel_id)
+                ch = self.store.channels.get(channel_id)
                 if ch:
                     results.append(ch)
                     seen.add(channel_id)
         return results[:limit]
 
     async def open_channel(self, channel_id: str) -> Channel:
-        return self.channels[channel_id]
+        return self.store.channels[channel_id]
 
     async def get_channel_info(self, channel_id: str) -> ChannelInfo:
         await asyncio.sleep(0.05)
-        channel = self.channels[channel_id]
+        channel = self.store.channels[channel_id]
         is_dm = channel_id.startswith("d")
 
         if is_dm:
-            dm_user_map = {
-                "d1": _ALICE, "d2": _BOB, "d3": _EVE, "d4": _GRACE,
-            }
+            dm_user_map = {"d1": _ALICE, "d2": _BOB, "d3": _EVE, "d4": _GRACE}
             user = dm_user_map.get(channel_id)
             return ChannelInfo(channel=channel, is_dm=True, user=user, members_count=2)
 
@@ -479,13 +443,13 @@ class MockClient:
 
     async def pin_message(self, channel_id: str, message_id: str) -> None:
         await asyncio.sleep(0.05)
-        ch = self.channels.get(channel_id)
+        ch = self.store.channels.get(channel_id)
         if ch:
             ch.pinned_message_id = message_id
 
     async def unpin_message(self, channel_id: str) -> None:
         await asyncio.sleep(0.05)
-        ch = self.channels.get(channel_id)
+        ch = self.store.channels.get(channel_id)
         if ch:
             ch.pinned_message_id = None
 
@@ -501,17 +465,14 @@ class MockClient:
                 msg.text = text
                 break
 
-    def start_auto_reply(self, channel_id: str) -> None:  # noqa: ARG002
-        if self._main_loop and not self._status_task_started:
-            self._status_task_started = True
-            self._main_loop.create_task(self._simulate_statuses())
+    # ── background simulation ─────────────────────────────────────────────────
 
     async def _simulate_statuses(self) -> None:
         dm_user_ids = ["u1", "u2", "u5", "u7"]
         while True:
             await asyncio.sleep(random.uniform(10, 20))
             user_id = random.choice(dm_user_ids)
-            user = _USERS.get(user_id)
+            user = self.store.users.get(user_id)
             if not user:
                 continue
             if user.online:
@@ -519,5 +480,6 @@ class MockClient:
                 user.last_seen = datetime.now()
             else:
                 user.online = True
-            if self.on_status_change:
-                self.on_status_change(user_id, user.online, user.last_seen)
+            self.event_queue.put_nowait(
+                StatusChangeEvent(user_id, user.online, user.last_seen)
+            )
