@@ -230,10 +230,10 @@ def render_bubble(
         return bubble
 
     if is_own:
-        read_styled = f"[{_READ_COLOR}]>>[/]" if msg.read else "[bold white]>[/]"
+        read_styled = f"[{_READ_COLOR}]✓✓[/]" if msg.read else "[dim white]✓[/]"
         ts_plain = f"  {ts}" if ctx.show_ts else ""
         ts_styled = f"  [dim white]{ts}[/]" if ctx.show_ts else ""
-        raw_read = ">>" if msg.read else ">"
+        raw_read = "✓✓" if msg.read else "✓"
         raw_vis = f"You: {msg.text or ''} {raw_read}{ts_plain}"
         left_pad = max(0, ctx.width - visible_len(raw_vis) - 2)
         content.append(
@@ -245,6 +245,7 @@ def render_bubble(
         color = user.color if user and user.color != "text" else "text"
         initial = msg.username[0].upper() if msg.username else "?"
         safe_name = (msg.username or "?").replace("[", "[[")
+        unread_dot = " [bold #0D9488]●[/]" if not msg.read else ""
         if ctx.show_ts:
             plain = f" {initial}  {msg.username or ''}: {msg.text or ''}"
             pad = max(0, ctx.width - visible_len(plain) - len(f"  {ts}") - 3)
@@ -253,7 +254,7 @@ def render_bubble(
             ts_styled = ""
         content.append(
             f"[white on {_OTHER_BG}] [white on {color}] {initial} [/]  "
-            f"{safe_name}: {text}{ts_styled}[/]"
+            f"{safe_name}: {text}{ts_styled}{unread_dot}[/]"
         )
         kind = "other"
 

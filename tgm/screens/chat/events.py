@@ -41,3 +41,11 @@ class MessageEdited(Message):
         self.channel_id = channel_id
         self.message_id = message_id
         self.text = text
+
+
+class MessagePinned(Message):
+    """msg_id is None when the message was unpinned."""
+    def __init__(self, channel_id: str, msg_id: str | None) -> None:
+        super().__init__()
+        self.channel_id = channel_id
+        self.msg_id = msg_id

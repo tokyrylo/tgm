@@ -8,7 +8,7 @@ from textual.widgets import RichLog
 from tgm.config.themes import ACCENT_THEMES, PALETTE
 from tgm.core.models.messages import Message
 from tgm.core.protocol import ClientProtocol
-from tgm.widgets.input.events import DeleteMessage, SetEdit, SetReply
+from tgm.widgets.input.events import DeleteMessage, SetEdit, SetReply, TogglePinMessage
 
 from .bubble import Bubble, RenderContext, render_bubble, render_date_sep
 
@@ -229,6 +229,19 @@ class MessageList(RichLog):
                     self.post_message(DeleteMessage(msg.id))
                     self._cursor = None
                     self._rerender_all()
+        elif key == "p":
+            if self._cursor is not None and self._cursor < len(self._msgs):
+                msg = self._msgs[self._cursor]
+                self.post_message(TogglePinMessage(msg.id))
+                self._cursor = None
+                self._rerender_all()
+        elif key == "y":
+            if self._cursor is not None and self._cursor < len(self._msgs):
+                msg = self._msgs[self._cursor]
+                if msg.text:
+                    self.app.copy_to_clipboard(msg.text)
+                self._cursor = None
+                self._rerender_all()
         elif key == "escape":
             if self._cursor is not None:
                 self._cursor = None

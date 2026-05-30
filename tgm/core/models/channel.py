@@ -16,6 +16,7 @@ class Channel:
     unread: int = 0
     is_dm: bool = False
     peer_user_id: str | None = None
+    pinned_message_id: str | None = None
 
 
 @dataclass

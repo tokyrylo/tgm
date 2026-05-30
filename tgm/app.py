@@ -21,8 +21,8 @@ from tgm.config.settings_store import (
 from tgm.core import ClientProtocol
 from tgm.core.models.channel import ChannelSettings
 from tgm.screens import LoginScreen
-from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessageSent, MessagesLoaded, MessagesLoading
-from tgm.widgets.input.events import DeleteMessage, EditMessage
+from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessagePinned, MessageSent, MessagesLoaded, MessagesLoading
+from tgm.widgets.input.events import DeleteMessage, EditMessage, TogglePinMessage
 from tgm.screens.search.events import ChannelChosen
 from tgm.screens.settings.events import (
     ChannelSettingChanged,
@@ -157,13 +157,31 @@ class TgmApp(App):
             self._do_send(channel_id, text, reply_to_id), exclusive=False, group="msg-send"
         )
 
+    def send_file(self, file_path: str) -> None:
+        if not self.current_channel_id:
+            return
+        self.run_worker(
+            self._do_send_file(self.current_channel_id, file_path),
+            exclusive=False, group="msg-send",
+        )
+
     async def _fetch_messages(self, channel_id: str) -> None:
         self._post_to_chat(MessagesLoading(channel_id))
         try:
             messages = await self.client.get_channel_messages(channel_id)  # type: ignore[union-attr]
+            await self.client.mark_as_read(channel_id)  # type: ignore[union-attr]
         except Exception:
             messages = []
         self._post_to_chat(MessagesLoaded(channel_id, messages))
+
+    async def _do_send_file(self, channel_id: str, file_path: str) -> None:
+        if not self.client:
+            return
+        try:
+            msg = await self.client.send_file(channel_id, file_path)
+            self._post_to_chat(MessageSent(channel_id, msg))
+        except Exception:
+            pass
 
     async def _do_send(self, channel_id: str, text: str, reply_to_id: str | None) -> None:
         if not self.client:
@@ -206,6 +224,37 @@ class TgmApp(App):
 
     def on_telegram_credentials_save(self, event: TelegramCredentialsSave) -> None:
         _save_telegram(event.api_id, event.api_hash)
+
+    def on_toggle_pin_message(self, event: TogglePinMessage) -> None:
+        event.stop()
+        channel_id = self.current_channel_id
+        if not channel_id or not self.client:
+            return
+        channel = self.client.channels.get(channel_id)
+        if not channel:
+            return
+        if channel.pinned_message_id == event.msg_id:
+            self.run_worker(self._do_unpin(channel_id), exclusive=False, group="msg-pin")
+        else:
+            self.run_worker(self._do_pin(channel_id, event.msg_id), exclusive=False, group="msg-pin")
+
+    async def _do_pin(self, channel_id: str, msg_id: str) -> None:
+        if not self.client:
+            return
+        try:
+            await self.client.pin_message(channel_id, msg_id)
+            self._post_to_chat(MessagePinned(channel_id, msg_id))
+        except Exception:
+            pass
+
+    async def _do_unpin(self, channel_id: str) -> None:
+        if not self.client:
+            return
+        try:
+            await self.client.unpin_message(channel_id)
+            self._post_to_chat(MessagePinned(channel_id, None))
+        except Exception:
+            pass
 
     def on_delete_message(self, event: DeleteMessage) -> None:
         event.stop()

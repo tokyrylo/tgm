@@ -58,11 +58,11 @@ def _msg(
 # ── channels ────────────────────────────────────────────────────────────────
 
 _CHANNELS: list[Channel] = [
-    Channel(id="g1", name="dev-team",       topic="Engineering discussions",          last_message="ship it 🚢",                    unread=5),
+    Channel(id="g1", name="dev-team",       topic="Engineering discussions",          last_message="ship it 🚢",                    unread=5, pinned_message_id="g1-9"),
     Channel(id="g2", name="random",         topic="Off-topic, memes, water-cooler",   last_message="haha true 😂",                  unread=2),
     Channel(id="g3", name="design-squad",   topic="UI/UX feedback and assets",        last_message="updated the mockups",           unread=0),
     Channel(id="g4", name="ops-alerts",     topic="Infra & incidents",                last_message="deploy looks stable",           unread=0),
-    Channel(id="d1", name="Alice Johnson",  topic="", last_message="see you there!",           unread=1, is_dm=True, peer_user_id="u1"),
+    Channel(id="d1", name="Alice Johnson",  topic="", last_message="see you there!",           unread=1, is_dm=True, peer_user_id="u1", pinned_message_id="d1-5"),
     Channel(id="d2", name="Bob Smith",      topic="", last_message="yeah let me check",          unread=0, is_dm=True, peer_user_id="u2"),
     Channel(id="d3", name="Eve Wilson",     topic="", last_message="sounds fun, I'm in",         unread=3, is_dm=True, peer_user_id="u5"),
     Channel(id="d4", name="Grace Kim",      topic="", last_message="thanks for the review 🙏",   unread=0, is_dm=True, peer_user_id="u7"),
@@ -476,6 +476,18 @@ class MockClient:
             members=members,
             members_count=len(members),
         )
+
+    async def pin_message(self, channel_id: str, message_id: str) -> None:
+        await asyncio.sleep(0.05)
+        ch = self.channels.get(channel_id)
+        if ch:
+            ch.pinned_message_id = message_id
+
+    async def unpin_message(self, channel_id: str) -> None:
+        await asyncio.sleep(0.05)
+        ch = self.channels.get(channel_id)
+        if ch:
+            ch.pinned_message_id = None
 
     async def delete_message(self, channel_id: str, message_id: str) -> None:
         await asyncio.sleep(0.05)
