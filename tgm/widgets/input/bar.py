@@ -10,7 +10,7 @@ from textual.widgets import Button, Input
 
 from tgm.config.themes import PALETTE
 
-from .events import AttachFile, ClearEdit, ClearReply, EditMessage, Reply, SendMessage, SetEdit, SetReply
+from .events import AttachFile, ClearEdit, ClearReply, EditMessage, SendMessage
 from .reply_bar import ReplyBar
 
 if TYPE_CHECKING:
@@ -33,11 +33,8 @@ class _EmojiAC(Protocol):
 
 
 class AppContext(Protocol):
-    reply_to_msg: Reply | None
     emoji_trigger: str
     enter_to_send: bool
-
-    def query_one(self, selector: str) -> Any: ...
 
 
 class InputBar(Horizontal):
@@ -60,50 +57,44 @@ class InputBar(Horizontal):
         self._ac: _EmojiAC | None = self._safe_get_ac()
         self._ac_debounce: Timer | None = None
         self._ac_seq: int = 0
-        self.refresh_reply_bar()
 
     @property
     def ctx(self) -> AppContext:
         return cast(AppContext, self.app)
 
-    def refresh_reply_bar(self) -> None:
-        """Initial sync only — subsequent updates come via SetReply / ClearReply."""
-        self._update_reply(self.ctx.reply_to_msg)
+    # ── public API called by TgmApp ───────────────────────────────────────────
 
-    def on_set_reply(self, event: SetReply) -> None:
-        self._update_reply(event.reply)
-        event.stop()
+    def sync_reply(self, reply: Any) -> None:
+        """Push reply state from TgmApp down into this widget."""
+        if reply:
+            sender = reply.username or "?"
+            preview = (reply.text[:60] if reply.text else "[Photo]").replace("[", "[[").replace("]", "]]")
+            content = (
+                f"[dim {PALETTE['reply']}]▎ Reply to [bold]{sender}[/][/] "
+                f"[dim white]{preview}[/]  [dim](Esc to cancel)[/]"
+            )
+            self._reply_bar.show(content)
+        else:
+            self._reply_bar.show(None)
 
-    def on_clear_reply(self, _: ClearReply) -> None:
-        self._update_reply(None)
-
-    def on_set_edit(self, event: SetEdit) -> None:
-        event.stop()
-        self._editing_msg_id = event.msg_id
+    def activate_edit(self, msg_id: str, text: str) -> None:
+        """Enter edit mode for the given message."""
+        self._editing_msg_id = msg_id
+        preview = text[:60].replace("[", "[[").replace("]", "]]")
         self._edit_bar.show(
-            f"[bold yellow]✏ Editing[/]  [dim white]{event.text[:60].replace('[', '[[').replace(']', ']]')}[/]"
+            f"[bold yellow]✏ Editing[/]  [dim white]{preview}[/]"
             "  [dim](Esc to cancel)[/]"
         )
-        self._input.value = event.text
-        self._input.cursor_position = len(event.text)
+        self._input.value = text
+        self._input.cursor_position = len(text)
         self._input.focus()
+
+    # ── event handlers ────────────────────────────────────────────────────────
 
     def on_clear_edit(self, _: ClearEdit) -> None:
         self._editing_msg_id = None
         self._edit_bar.show(None)
         self._input.clear()
-
-    def _update_reply(self, reply: Reply | None) -> None:
-        self._reply_bar.show(self._format_reply(reply) if reply else None)
-
-    def _format_reply(self, reply: Reply) -> str:
-        sender = reply.username or "?"
-        preview = reply.text[:60] if reply.text else "[Photo]"
-        preview = preview.replace("[", "[[").replace("]", "]]")
-        return (
-            f"[dim {PALETTE['reply']}]▎ Reply to [bold]{sender}[/][/] "
-            f"[dim white]{preview}[/]  [dim](Esc to cancel)[/]"
-        )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "send-btn":
@@ -191,6 +182,8 @@ class InputBar(Horizontal):
         if event.key == "escape":
             if self._handle_ac_escape(event):
                 return
+            if self._handle_edit_escape(event):
+                return
             if self._handle_reply_escape(event):
                 return
             return
@@ -211,12 +204,15 @@ class InputBar(Horizontal):
             return True
         return False
 
-    def _handle_reply_escape(self, event) -> bool:
+    def _handle_edit_escape(self, event) -> bool:
         if self._editing_msg_id:
             self.post_message(ClearEdit())
             event.stop()
             return True
-        if self.ctx.reply_to_msg:
+        return False
+
+    def _handle_reply_escape(self, event) -> bool:
+        if self._reply_bar.display:
             self.post_message(ClearReply())
             event.stop()
             return True

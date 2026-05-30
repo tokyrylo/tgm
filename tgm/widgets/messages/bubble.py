@@ -15,6 +15,8 @@ from tgm.widgets.messages.renderer import format_text, format_text_highlighted
 _REPLY_COLOR = PALETTE["reply"]
 _READ_COLOR = PALETTE["read"]
 _OTHER_BG = PALETTE["bg_surface"]
+_CURSOR_BG = "#1e3a50"       # slightly brighter than bg_surface for selected other
+_CURSOR_OWN_BG = "#3a6fa0"   # slightly brighter than accent for selected own
 
 _MARKUP_RE = re.compile(r"\[/?[^\]]*\]")
 
@@ -236,8 +238,9 @@ def render_bubble(
         raw_read = "✓✓" if msg.read else "✓"
         raw_vis = f"You: {msg.text or ''} {raw_read}{ts_plain}"
         left_pad = max(0, ctx.width - visible_len(raw_vis) - 2)
+        own_bg = _CURSOR_OWN_BG if is_cursor else ctx.accent
         content.append(
-            f"[white on {ctx.accent}]{' ' * left_pad} "
+            f"[white on {own_bg}]{' ' * left_pad} "
             f"[bold white]You[/]: {text} {read_styled}{ts_styled}[/]"
         )
         kind: Literal["own", "other", "media"] = "own"
@@ -246,6 +249,7 @@ def render_bubble(
         initial = msg.username[0].upper() if msg.username else "?"
         safe_name = (msg.username or "?").replace("[", "[[")
         unread_dot = " [bold #0D9488]●[/]" if not msg.read else ""
+        other_bg = _CURSOR_BG if is_cursor else _OTHER_BG
         if ctx.show_ts:
             plain = f" {initial}  {msg.username or ''}: {msg.text or ''}"
             pad = max(0, ctx.width - visible_len(plain) - len(f"  {ts}") - 3)
@@ -253,7 +257,7 @@ def render_bubble(
         else:
             ts_styled = ""
         content.append(
-            f"[white on {_OTHER_BG}] [white on {color}] {initial} [/]  "
+            f"[white on {other_bg}] [white on {color}] {initial} [/]  "
             f"{safe_name}: {text}{ts_styled}{unread_dot}[/]"
         )
         kind = "other"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Protocol, cast
 
 from textual.app import ComposeResult
@@ -8,13 +7,11 @@ from textual.containers import Vertical
 from textual.widgets import Input, ListView, ListItem, Static
 
 from tgm.core.models.channel import Channel
-from tgm.core.protocol import ClientProtocol
 from tgm.screens._base import TgmModalScreen
-from tgm.screens.search.events import ChannelChosen
+from tgm.screens.search.events import ChannelChosen, GlobalSearchQuery, GlobalSearchResults
 
 
 class AppContext(Protocol):
-    client: ClientProtocol
     current_channel_id: str | None
 
 
@@ -41,6 +38,7 @@ class GlobalSearchScreen(TgmModalScreen[None]):
     def __init__(self) -> None:
         super().__init__()
         self._lv: ListView | None = None
+        self._last_query: str = ""
 
     @property
     def ctx(self) -> AppContext:
@@ -58,42 +56,30 @@ class GlobalSearchScreen(TgmModalScreen[None]):
 
     def on_input_changed(self, event: Input.Changed) -> None:
         event.stop()
-        self.run_worker(self._search(event.value), exclusive=True, group="gs-search")
+        self._last_query = event.value
+        self.post_message(GlobalSearchQuery(event.value))
 
-    async def _search(self, query: str) -> None:
-        try:
-            await asyncio.sleep(0.15)
-        except asyncio.CancelledError:
-            return
-
+    async def on_global_search_results(self, event: GlobalSearchResults) -> None:
+        event.stop()
         lv = self._lv
-        if lv is None:
+        if lv is None or event.query != self._last_query:
             return
 
-        query = query.strip()
-        if not query:
+        if not event.results:
             await lv.clear()
-            return
-
-        try:
-            results = await self.ctx.client.search_global(query)
-        except asyncio.CancelledError:
-            return
-
-        if not results:
-            await lv.clear()
-            await lv.mount(Static("[dim]No results[/]"))
+            if event.query.strip():
+                await lv.mount(Static("[dim]No results[/]"))
             return
 
         children = list(lv.children)
-        if len(children) == len(results) and all(isinstance(c, _ResultItem) for c in children):
-            for item, ch in zip(children, results):
+        if len(children) == len(event.results) and all(isinstance(c, _ResultItem) for c in children):
+            for item, ch in zip(children, event.results):
                 cast(_ResultItem, item).update_channel(ch)
         else:
             await lv.clear()
-            await lv.mount_all([_ResultItem(ch) for ch in results])
+            await lv.mount_all([_ResultItem(ch) for ch in event.results])
 
-        if lv.index is None or lv.index >= len(results):
+        if lv.index is None or lv.index >= len(event.results):
             lv.index = 0
 
     def _choose(self, item: _ResultItem) -> None:
