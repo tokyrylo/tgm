@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-from typing import Protocol, Sequence, cast
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, ListView, Static
 
-from tgm.core.models.channel import Channel
+from tgm.core.app_context import AppContext
 
 from .events import AvatarUpdated, ChannelSelected, CreateChannel
 from .preview import ChannelPreview
-
-
-class AppContext(Protocol):
-    current_channel_id: str | None
-    channels: Sequence[Channel]
 
 
 class ChannelList(Vertical):

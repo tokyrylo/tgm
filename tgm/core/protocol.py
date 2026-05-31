@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 from tgm.core.models import Channel, ChannelInfo, Message, User
@@ -62,6 +63,8 @@ class ClientProtocol(Protocol):
     async def forward_message(
         self, from_channel_id: str, to_channel_id: str, message_id: str
     ) -> None: ...
+
+    async def download_media(self, msg: Message, dest_dir: Path) -> list[str]: ...
 
     async def create_group(self, title: str) -> Channel: ...
     async def search_global(self, query: str, limit: int = 20) -> list[Channel]: ...

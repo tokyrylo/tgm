@@ -1,29 +1,22 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalGroup
-from textual.widgets import Footer, ListView, LoadingIndicator, Static
+from textual.widgets import Footer, Input, ListView, LoadingIndicator, Static
 
 from tgm.config.keybindings import get_binding_objects
-from tgm.core.protocol import ClientProtocol
+from tgm.core.app_context import AppContext
 from tgm.screens._base import TgmScreen
-from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessagePinned, MessageSent, MessagesLoaded, MessagesLoading
+from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessagePinned, MessageSent, MessageUpdated, MessagesLoaded, MessagesLoading
 from tgm.widgets.channels.list import ChannelList
 from tgm.widgets.emoji import EmojiAutocomplete, EmojiPicker
-from tgm.widgets.input.bar import InputBar
+from tgm.widgets.input.bar import INPUT_ID, InputBar
+from tgm.widgets.input.events import ClearReply, SetEdit, SetReply
 from tgm.widgets.messages.list import MessageList
 from tgm.widgets.search_bar import SearchBar
-
-
-class AppContext(Protocol):
-    current_channel_id: str | None
-    client: ClientProtocol
-
-    def load_messages(self, channel_id: str | None) -> None: ...
-    def send_file(self, file_path: str) -> None: ...
 
 
 class ChatScreen(TgmScreen):
@@ -136,7 +129,7 @@ class ChatScreen(TgmScreen):
         ml.load_messages(event.messages)
         self._refresh_top_bar()
         self.query_one(ChannelList).refresh_previews()
-        channel = self.ctx.client.channels.get(event.channel_id)
+        channel = self.ctx.get_channel(event.channel_id)
         self._update_pinned_bar(channel.pinned_message_id if channel else None, ml)
 
     def on_message_sent(self, event: MessageSent) -> None:
@@ -150,6 +143,26 @@ class ChatScreen(TgmScreen):
     def on_message_edited(self, event: MessageEdited) -> None:
         event.stop()
         self.query_one(MessageList).update_message(event.message_id, event.text)
+
+    def on_message_updated(self, event: MessageUpdated) -> None:
+        event.stop()
+        if event.channel_id != self.ctx.current_channel_id:
+            return
+        self.query_one(MessageList).replace_message(event.message)
+
+    def on_set_reply(self, event: SetReply) -> None:
+        event.stop()
+        bar = self.query_one(InputBar)
+        bar.sync_reply(event.reply)
+        bar.query_one(f"#{INPUT_ID}", Input).focus()
+
+    def on_clear_reply(self, event: ClearReply) -> None:
+        event.stop()
+        self.query_one(InputBar).sync_reply(None)
+
+    def on_set_edit(self, event: SetEdit) -> None:
+        event.stop()
+        self.query_one(InputBar).activate_edit(event.msg_id, event.text)
 
     def on_message_pinned(self, event: MessagePinned) -> None:
         event.stop()
@@ -176,11 +189,11 @@ class ChatScreen(TgmScreen):
         channel_id = self.ctx.current_channel_id
         if not channel_id:
             return
-        channel = self.ctx.client.channels.get(channel_id)
+        channel = self.ctx.get_channel(channel_id)
         if not channel:
             return
         if channel.is_dm and channel.peer_user_id:
-            user = self.ctx.client.users.get(channel.peer_user_id)
+            user = self.ctx.users.get(channel.peer_user_id)
             if user:
                 status = format_last_seen(user)
                 color = "green" if user.online else "dim white"

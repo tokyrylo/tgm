@@ -14,3 +14,4 @@ APP_DIR = Path(
 SETTINGS_FILE = APP_DIR / "settings.json"
 AVATAR_DIR = APP_DIR / "avatars"
 SESSION_DIR = APP_DIR / "sessions"
+MEDIA_DIR = APP_DIR / "media"

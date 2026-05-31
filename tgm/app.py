@@ -14,7 +14,7 @@ from tgm.core.models.channel import ChannelSettings
 
 if TYPE_CHECKING:
     from tgm.core.models.channel import Channel
-    from tgm.core.models.messages import Message
+    from tgm.core.models.user import User
 
 
 _STYLE = Path(__file__).parent / "static" / "styles" / "style.tcss"
@@ -30,7 +30,6 @@ class TgmApp(_AuthMixin, _MessagingMixin, _ChannelsMixin, _SettingsMixin, App):
         super().__init__()
         self.client: ClientProtocol | None = None
         self.current_channel_id: str | None = None
-        self.reply_to_msg: Message | None = None
         self._skip_login: bool = False
 
         s = _load_global()
@@ -48,3 +47,19 @@ class TgmApp(_AuthMixin, _MessagingMixin, _ChannelsMixin, _SettingsMixin, App):
     @property
     def channels(self) -> list[Channel]:
         return self.client.channel_list if self.client else []
+
+    @property
+    def users(self) -> dict[str, User]:
+        return self.client.users if self.client else {}
+
+    @property
+    def current_user_id(self) -> str | None:
+        return self.client.current_user_id if self.client else None
+
+    def get_channel(self, channel_id: str) -> Channel | None:
+        return self.client.channels.get(channel_id) if self.client else None
+
+    async def get_channel_info(self, channel_id: str):
+        if not self.client:
+            return None
+        return await self.client.get_channel_info(channel_id)
