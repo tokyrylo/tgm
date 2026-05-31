@@ -68,10 +68,13 @@ class MessageList(RichLog):
         self._rerender_all()
 
     def update_message(self, msg_id: str, text: str) -> None:
+        from dataclasses import replace
         from tgm.widgets.messages.bubble import invalidate_bubble
-        for msg in self._msgs:
+        for i, msg in enumerate(self._msgs):
             if msg.id == msg_id:
-                msg.text = text
+                updated = replace(msg, text=text)
+                self._msgs[i] = updated
+                self._msgs_by_id[msg_id] = updated
                 invalidate_bubble(msg_id)
                 break
         self._rerender_all()
