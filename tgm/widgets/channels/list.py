@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, ListView, Static
 
-from tgm.core.app_context import AppContext
+from tgm.core.app_context import ChannelContext
 
 from .events import AvatarUpdated, ChannelSelected, CreateChannel
 from .preview import ChannelPreview
@@ -25,8 +25,8 @@ class ChannelList(Vertical):
         self._items_by_id: dict[str, ChannelPreview] = {}
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
+    def ctx(self) -> ChannelContext:
+        return cast(ChannelContext, self.app)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "add-channel-btn":

@@ -57,3 +57,11 @@ class MessageUpdated(Message):
         super().__init__()
         self.channel_id = channel_id
         self.message = message
+
+
+class RefreshChannelList(Message):
+    """Posted by controllers to trigger channel list refresh."""
+
+
+class RefreshStatusUI(Message):
+    """Posted by controllers to trigger status bar + channel list refresh."""

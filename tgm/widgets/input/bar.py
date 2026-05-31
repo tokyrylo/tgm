@@ -3,13 +3,15 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Protocol, cast
 
+from tgm.core.models.messages import Message as TgMessage
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.css.query import NoMatches
 from textual.widgets import Button, Input
 
 from tgm.config.themes import PALETTE
-from tgm.core.app_context import AppContext
+from tgm.core.app_context import InputSettings
 
 from .events import AttachFile, ClearEdit, ClearReply, EditMessage, SendMessage
 from .reply_bar import ReplyBar
@@ -56,16 +58,18 @@ class InputBar(Horizontal):
         self._ac_seq: int = 0
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
+    def ctx(self) -> InputSettings:
+        return cast(InputSettings, self.app)
 
-    # ── public API ────────────────────────────────────────────────────────────
-
-    def sync_reply(self, reply: Any) -> None:
+    def sync_reply(self, reply: TgMessage | None) -> None:
         if reply:
             self._reply_to_msg_id = reply.id
             sender = reply.username or "?"
-            preview = (reply.text[:60] if reply.text else "[Photo]").replace("[", "[[").replace("]", "]]")
+            preview = (
+                (reply.text[:60] if reply.text else "[Photo]")
+                .replace("[", "[[")
+                .replace("]", "]]")
+            )
             content = (
                 f"[dim {PALETTE['reply']}]▎ Reply to [bold]{sender}[/][/] "
                 f"[dim white]{preview}[/]  [dim](Esc to cancel)[/]"
@@ -86,8 +90,6 @@ class InputBar(Horizontal):
         self._input.value = text
         self._input.cursor_position = len(text)
         self._input.focus()
-
-    # ── event handlers ────────────────────────────────────────────────────────
 
     def on_clear_edit(self, _: ClearEdit) -> None:
         self._editing_msg_id = None

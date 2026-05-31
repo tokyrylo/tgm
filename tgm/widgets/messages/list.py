@@ -6,7 +6,11 @@ from typing import cast
 from textual.widgets import RichLog
 
 from tgm.config.themes import ACCENT_THEMES, PALETTE
-from tgm.core.app_context import AppContext
+from tgm.core.app_context import ChannelContext, DisplaySettings
+
+
+class _MessageListCtx(DisplaySettings, ChannelContext):
+    """Intersection needed by MessageList."""
 from tgm.core.models.messages import Message
 from tgm.widgets.input.events import DeleteMessage, SetEdit, SetReply, TogglePinMessage
 
@@ -18,7 +22,9 @@ _ACCENT_DEFAULT = PALETTE["accent_default"]
 class MessageList(RichLog):
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(highlight=True, markup=True, wrap=True, max_lines=None, **kwargs)
+        super().__init__(
+            highlight=True, markup=True, wrap=True, max_lines=None, **kwargs
+        )
         self._msgs: list[Message] = []
         self._msgs_by_id: dict[str, Message] = {}
         self._rendered: list[Bubble] = []
@@ -28,10 +34,8 @@ class MessageList(RichLog):
         self._cursor: int | None = None
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
-
-    # ── public API ────────────────────────────────────────────────────────────
+    def ctx(self) -> _MessageListCtx:
+        return cast(_MessageListCtx, self.app)
 
     def load_messages(self, messages: list[Message]) -> None:
         self._cursor = None
@@ -62,6 +66,7 @@ class MessageList(RichLog):
 
     def replace_message(self, msg: Message) -> None:
         from tgm.widgets.messages.bubble import invalidate_bubble
+
         for i, m in enumerate(self._msgs):
             if m.id == msg.id:
                 self._msgs[i] = msg
@@ -72,7 +77,9 @@ class MessageList(RichLog):
 
     def update_message(self, msg_id: str, text: str) -> None:
         from dataclasses import replace
+
         from tgm.widgets.messages.bubble import invalidate_bubble
+
         for i, msg in enumerate(self._msgs):
             if msg.id == msg_id:
                 updated = replace(msg, text=text)
@@ -121,8 +128,6 @@ class MessageList(RichLog):
         self._scroll_to_match(self._current_match)
         return self._current_match + 1, len(self._match_indices)
 
-    # ── internals ─────────────────────────────────────────────────────────────
-
     def _avail(self) -> int:
         return max(80, self.size.width - 2) if self.size.width > 0 else 80
 
@@ -155,7 +160,12 @@ class MessageList(RichLog):
                 self._rendered.append(bubble)
 
     def _write_bubble(
-        self, msg: Message, highlight_query: str, rctx: RenderContext, *, is_cursor: bool = False
+        self,
+        msg: Message,
+        highlight_query: str,
+        rctx: RenderContext,
+        *,
+        is_cursor: bool = False,
     ) -> Bubble:
         ctx = self.ctx
         is_own = msg.user_id == ctx.current_user_id
@@ -184,7 +194,9 @@ class MessageList(RichLog):
                 if last_date != msg_date:
                     self.write(render_date_sep(msg.timestamp, rctx.width))
                     last_date = msg_date
-                bubble = self._write_bubble(msg, self._search_query, rctx, is_cursor=(i == self._cursor))
+                bubble = self._write_bubble(
+                    msg, self._search_query, rctx, is_cursor=(i == self._cursor)
+                )
                 self._rendered.append(bubble)
 
     def _scroll_to_cursor(self) -> None:

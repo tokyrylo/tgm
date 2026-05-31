@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import Input, ListView, ListItem, Static
 
+from tgm.core.app_context import ChannelContext
 from tgm.core.models.channel import Channel
 from tgm.screens._base import TgmModalScreen
 from tgm.screens.search.events import ChannelChosen, GlobalSearchQuery, GlobalSearchResults
-
-
-class AppContext(Protocol):
-    current_channel_id: str | None
 
 
 class _ResultItem(ListItem):
@@ -41,8 +38,8 @@ class GlobalSearchScreen(TgmModalScreen[None]):
         self._last_query: str = ""
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
+    def ctx(self) -> ChannelContext:
+        return cast(ChannelContext, self.app)
 
     def compose(self) -> ComposeResult:
         with Vertical(id="gs-container"):

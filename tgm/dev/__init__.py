@@ -1,4 +1,5 @@
 from tgm.app import TgmApp
+from tgm.core.protocol import ClientProtocol
 from tgm.dev.mock_client import MockClient
 from tgm.screens.chat.screen import ChatScreen
 
@@ -7,8 +8,8 @@ class DevApp(TgmApp):
     def __init__(self) -> None:
         super().__init__()
         self._skip_login = True
-        client = MockClient()
-        self.client = client  # type: ignore[assignment]
+        client: ClientProtocol = MockClient()
+        self.client = client
         if client.channel_list:
             self.current_channel_id = client.channel_list[0].id
 

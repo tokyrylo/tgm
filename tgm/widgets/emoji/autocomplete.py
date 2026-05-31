@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import cast
 
 from textual.containers import Horizontal
 from textual.widgets import Static
 
+from tgm.core.app_context import InputSettings
 from tgm.widgets.emoji.data import search_emojis
-
-
-class AppContext(Protocol):
-    emoji_trigger: str
 
 
 class EmojiAutocomplete(Horizontal):
@@ -20,8 +17,8 @@ class EmojiAutocomplete(Horizontal):
         self._widgets: list[Static] = []
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
+    def ctx(self) -> InputSettings:
+        return cast(InputSettings, self.app)
 
     @property
     def is_showing(self) -> bool:

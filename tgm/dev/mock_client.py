@@ -10,16 +10,12 @@ from tgm.core.models.messages import Message
 from tgm.core.models.user import User
 from tgm.core.store import Store
 
-# ── helpers ─────────────────────────────────────────────────────────────────
-
 _now = datetime.now()
 
 
 def _t(**kw) -> datetime:
     return _now - timedelta(**kw)
 
-
-# ── users ────────────────────────────────────────────────────────────────────
 
 _ME = User(
     id="me",
@@ -148,8 +144,6 @@ def _photo_msg(
     )
 
 
-# ── channels ─────────────────────────────────────────────────────────────────
-
 _CHANNELS: list[Channel] = [
     Channel(
         id="g1",
@@ -219,10 +213,8 @@ _CHANNELS: list[Channel] = [
     ),
 ]
 
-# ── messages ──────────────────────────────────────────────────────────────────
 
 _MESSAGES: dict[str, list[Message]] = {
-    # ── dev-team ─────────────────────────────────────────────────────────────
     "g1": [
         _msg("g1-1", _ALICE, "morning everyone 👋", "g1", _t(hours=8)),
         _msg("g1-2", _BOB, "o/", "g1", _t(hours=7, minutes=55)),
@@ -293,9 +285,10 @@ _MESSAGES: dict[str, list[Message]] = {
         _msg("g1-21", _DAVE, "metrics stable 📈", "g1", _t(hours=1), read=False),
         _msg("g1-22", _BOB, "love it", "g1", _t(minutes=45), read=False),
         _msg("g1-23", _ALICE, "ship it 🚢", "g1", _t(minutes=20), read=False),
-        _photo_msg("g1-24", _CAROL, "metrics dashboard 📊", "g1", _t(minutes=10), read=False),
+        _photo_msg(
+            "g1-24", _CAROL, "metrics dashboard 📊", "g1", _t(minutes=10), read=False
+        ),
     ],
-    # ── random ───────────────────────────────────────────────────────────────
     "g2": [
         _msg("g2-1", _FRANK, "https://xkcd.com/2347", "g2", _t(days=1, hours=3)),
         _msg(
@@ -365,7 +358,6 @@ _MESSAGES: dict[str, list[Message]] = {
         ),
         _msg("g2-15", _EVE, "haha true 😂", "g2", _t(hours=1, minutes=10), read=False),
     ],
-    # ── design-squad ─────────────────────────────────────────────────────────
     "g3": [
         _msg(
             "g3-1",
@@ -404,7 +396,6 @@ _MESSAGES: dict[str, list[Message]] = {
         _msg("g3-10", _GRACE, "updated the mockups", "g3", _t(hours=3)),
         _msg("g3-11", _CAROL, "shipping to eng tomorrow", "g3", _t(hours=2)),
     ],
-    # ── ops-alerts ───────────────────────────────────────────────────────────
     "g4": [
         _msg(
             "g4-1",
@@ -452,7 +443,6 @@ _MESSAGES: dict[str, list[Message]] = {
         ),
         _msg("g4-12", _DAVE, "deploy looks stable", "g4", _t(minutes=30)),
     ],
-    # ── Alice DM ─────────────────────────────────────────────────────────────
     "d1": [
         _msg(
             "d1-1",
@@ -529,7 +519,6 @@ _MESSAGES: dict[str, list[Message]] = {
         _msg("d1-13", _ALICE, "see you there!", "d1", _t(minutes=30), read=False),
         _photo_msg("d1-14", _ALICE, "", "d1", _t(minutes=5), read=False),
     ],
-    # ── Bob DM ───────────────────────────────────────────────────────────────
     "d2": [
         _msg(
             "d2-1",
@@ -587,7 +576,6 @@ _MESSAGES: dict[str, list[Message]] = {
         ),
         _msg("d2-9", _BOB, "yeah let me check", "d2", _t(hours=1)),
     ],
-    # ── Eve DM ───────────────────────────────────────────────────────────────
     "d3": [
         _msg("d3-1", _EVE, "hey! hiking this weekend?", "d3", _t(days=1, hours=2)),
         _msg(
@@ -641,7 +629,6 @@ _MESSAGES: dict[str, list[Message]] = {
         _msg("d3-10", _EVE, "sounds fun, I'm in", "d3", _t(hours=1), read=False),
         _msg("d3-11", _EVE, "can't wait! 🏔️", "d3", _t(minutes=15), read=False),
     ],
-    # ── Grace DM ─────────────────────────────────────────────────────────────
     "d4": [
         _msg(
             "d4-1",
@@ -700,7 +687,6 @@ _MESSAGES: dict[str, list[Message]] = {
     ],
 }
 
-# ── auto-reply pools ──────────────────────────────────────────────────────────
 
 _AUTO_REPLIES: dict[str, list[str]] = {
     "d1": [
@@ -803,8 +789,6 @@ class MockClient:
         self.event_queue: asyncio.Queue[ClientEvent] = asyncio.Queue()
         self._status_task_started = False
 
-    # ── Store convenience accessors (protocol requirement) ───────────────────
-
     @property
     def users(self) -> dict[str, User]:
         return self.store.users
@@ -824,8 +808,6 @@ class MockClient:
     @property
     def current_user_id(self) -> str | None:
         return self.store.current_user_id
-
-    # ── auth ─────────────────────────────────────────────────────────────────
 
     async def is_authorized(self) -> bool:
         return True
@@ -848,8 +830,6 @@ class MockClient:
     async def sign_in_with_password(self, password: str) -> User:
         return _ME
 
-    # ── lifecycle ────────────────────────────────────────────────────────────
-
     async def load_dialogs(self, limit: int = 100) -> None:
         if not self._status_task_started:
             self._status_task_started = True
@@ -857,8 +837,6 @@ class MockClient:
 
     async def disconnect(self) -> None:
         pass
-
-    # ── messaging ────────────────────────────────────────────────────────────
 
     async def get_channel_messages(
         self, channel_id: str, limit: int = 50
@@ -940,8 +918,9 @@ class MockClient:
 
     async def download_media(self, msg, dest_dir) -> list[str]:
         """Generate a synthetic colour-gradient image for mock photo messages."""
-        from pathlib import Path
         import hashlib
+        from pathlib import Path
+
         try:
             from PIL import Image as _Image
         except ImportError:
@@ -960,11 +939,13 @@ class MockClient:
             t = y / h
             for x in range(w):
                 s = x / w
-                data.append((
-                    int(r0 * (1 - s) + r1 * s),
-                    int(g0 * (1 - t) + g1 * t),
-                    int(b0 + (b1 - b0) * (s + t) / 2),
-                ))
+                data.append(
+                    (
+                        int(r0 * (1 - s) + r1 * s),
+                        int(g0 * (1 - t) + g1 * t),
+                        int(b0 + (b1 - b0) * (s + t) / 2),
+                    )
+                )
         img = _Image.new("RGB", (w, h))
         img.putdata(data)
         img.save(str(path), "JPEG", quality=85)
@@ -975,8 +956,6 @@ class MockClient:
         self, from_channel_id: str, to_channel_id: str, message_id: str
     ) -> None:
         pass
-
-    # ── channels ─────────────────────────────────────────────────────────────
 
     async def create_group(self, title: str) -> Channel:
         ch = Channel(id=f"new-{title}", name=title, topic="")
@@ -1055,8 +1034,6 @@ class MockClient:
             if msg.id == message_id:
                 msg.text = text
                 break
-
-    # ── background simulation ─────────────────────────────────────────────────
 
     async def _simulate_statuses(self) -> None:
         dm_user_ids = ["u1", "u2", "u5", "u7"]

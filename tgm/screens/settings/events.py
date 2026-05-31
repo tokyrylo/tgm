@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
-
 from textual.message import Message
+
+SettingValue = bool | str | int | float
 
 
 class SectionSelected(Message):
@@ -18,14 +18,14 @@ class ChannelSettingsOpened(Message):
 
 
 class GlobalSettingChanged(Message):
-    def __init__(self, key: str, value: Any) -> None:
+    def __init__(self, key: str, value: SettingValue) -> None:
         super().__init__()
         self.key = key
         self.value = value
 
 
 class ChannelSettingChanged(Message):
-    def __init__(self, channel_id: str, key: str, value: Any) -> None:
+    def __init__(self, channel_id: str, key: str, value: SettingValue) -> None:
         super().__init__()
         self.channel_id = channel_id
         self.key = key
