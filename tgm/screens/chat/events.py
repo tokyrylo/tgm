@@ -49,3 +49,11 @@ class MessagePinned(Message):
         super().__init__()
         self.channel_id = channel_id
         self.msg_id = msg_id
+
+
+class MessageUpdated(Message):
+    """Full message replacement, e.g. after media download completes."""
+    def __init__(self, channel_id: str, message: TgMessage) -> None:
+        super().__init__()
+        self.channel_id = channel_id
+        self.message = message

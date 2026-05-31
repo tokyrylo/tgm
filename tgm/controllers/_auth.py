@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING
 
 from tgm.screens.login.events import (
@@ -92,20 +91,3 @@ class _AuthMixin:
                 self.current_channel_id = self.client.channel_list[0].id
             self.run_worker(self._client_event_reader(), exclusive=False, group="client-events")  # type: ignore[attr-defined]
         self.push_screen(ChatScreen())  # type: ignore[attr-defined]
-
-    async def _client_event_reader(self) -> None:
-        from tgm.core.client_events import NewMessageEvent, StatusChangeEvent
-        from tgm.screens.chat.events import MessageSent
-
-        try:
-            while self.client:
-                event = await self.client.event_queue.get()
-                if isinstance(event, NewMessageEvent):
-                    msg = event.msg
-                    if msg.channel_id == self.current_channel_id:
-                        self._post_to_chat(MessageSent(msg.channel_id, msg))  # type: ignore[attr-defined]
-                    self._refresh_channel_list()  # type: ignore[attr-defined]
-                elif isinstance(event, StatusChangeEvent):
-                    self._refresh_status_ui()  # type: ignore[attr-defined]
-        except asyncio.CancelledError:
-            pass

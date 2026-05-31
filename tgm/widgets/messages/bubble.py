@@ -202,7 +202,9 @@ def render_bubble(
         if highlight_query and msg.text
         else (format_text(msg.text) if msg.text else "")
     )
-    has_media = bool(msg.media_paths and "photo" in (msg.media_types or []))
+    has_photo_type = "photo" in (msg.media_types or [])
+    has_media = bool(msg.media_paths and has_photo_type)
+    is_loading_photo = has_photo_type and not has_media
     is_gallery = has_media and len(msg.media_paths) > 1  # type: ignore[arg-type]
     border_col = (
         ctx.accent if is_own
@@ -211,7 +213,9 @@ def render_bubble(
 
     content: list[str] = []
 
-    if has_media:
+    if is_loading_photo:
+        content.append("[dim white]📷 Photo[/]")
+    elif has_media:
         content.extend(
             render_gallery(msg.media_paths, ctx.width)  # type: ignore[arg-type]
             if is_gallery
@@ -223,8 +227,8 @@ def render_bubble(
         if quote:
             content.append(quote)
 
-    # media-only message
-    if not msg.text and has_media:
+    # media-only message (includes loading placeholder)
+    if not msg.text and (has_media or is_loading_photo):
         lines = wrap_frame(content, border_col, ctx.width, bright=is_cursor) if ctx.large else content
         bubble = Bubble(lines=lines, msg_id=msg.id, kind="media")
         if not is_cursor:

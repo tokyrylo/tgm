@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -17,8 +17,8 @@ from textual.widgets import (
 from tgm.config.keybindings import get_binding_objects, load_bindings
 from tgm.config.settings_store import load_telegram
 from tgm.config.themes import ACCENT_THEMES
+from tgm.core.app_context import AppContext
 from tgm.core.models.channel import Channel, ChannelSettings
-from tgm.core.protocol import ClientProtocol
 from tgm.screens._base import TgmScreen
 from tgm.screens.settings.channel_item_settings import ChannelSettingsItem
 from tgm.screens.settings.events import (
@@ -38,22 +38,6 @@ _SECTION_LABELS: dict[str, str] = {
     "login": "Login",
     "settings": "Settings",
 }
-
-
-class AppContext(Protocol):
-    client: ClientProtocol
-    channels: list[Channel]
-    enter_to_send: bool
-    show_timestamps: bool
-    accent_theme: str
-    emoji_trigger: str
-    big_msg_threshold: int
-    notifications: bool
-    message_density: str
-    text_wrap: bool
-    text_opacity: float
-
-    def get_channel_settings(self, channel_id: str) -> ChannelSettings: ...
 
 
 class SettingsScreen(TgmScreen):
@@ -273,7 +257,7 @@ class SettingsScreen(TgmScreen):
     async def _show_chat_settings(self, channel_id: str) -> None:
         content = self.query_one("#settings-content", VerticalScroll)
         await content.remove_children()
-        channel = self.ctx.client.channels.get(channel_id)
+        channel = self.ctx.get_channel(channel_id)
         if not channel:
             return
         self._editing_channel_id = channel_id

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from tgm.screens.chat.events import (
@@ -7,16 +8,14 @@ from tgm.screens.chat.events import (
     MessageEdited,
     MessagePinned,
     MessageSent,
+    MessageUpdated,
     MessagesLoaded,
     MessagesLoading,
 )
 from tgm.widgets.input.events import (
-    ClearReply,
     DeleteMessage,
     EditMessage,
     SendMessage,
-    SetEdit,
-    SetReply,
     TogglePinMessage,
 )
 
@@ -24,11 +23,12 @@ if TYPE_CHECKING:
     from tgm.core.models.messages import Message
     from tgm.core.protocol import ClientProtocol
 
+_MEDIA_GROUP = "msg-media"
+
 
 class _MessagingMixin:
     client: ClientProtocol | None
     current_channel_id: str | None
-    reply_to_msg: Message | None
 
     def load_messages(self, channel_id: str | None) -> None:
         if not channel_id or not self.client or channel_id not in self.client.channels:
@@ -55,21 +55,7 @@ class _MessagingMixin:
         event.stop()
         if not self.current_channel_id:
             return
-        reply_id = self.reply_to_msg.id if self.reply_to_msg else None
-        self.send_message(self.current_channel_id, event.text, reply_id)
-
-    def on_set_reply(self, event: SetReply) -> None:
-        self.reply_to_msg = event.reply  # type: ignore[assignment]
-        self._sync_input_bar_reply()
-        self._focus_input()
-
-    def on_clear_reply(self, event: ClearReply) -> None:  # noqa: ARG002
-        self.reply_to_msg = None
-        self._sync_input_bar_reply()
-
-    def on_set_edit(self, event: SetEdit) -> None:
-        event.stop()
-        self._get_input_bar_and(lambda bar: bar.activate_edit(event.msg_id, event.text))
+        self.send_message(self.current_channel_id, event.text, event.reply_to_msg_id)
 
     def on_delete_message(self, event: DeleteMessage) -> None:
         event.stop()
@@ -102,6 +88,32 @@ class _MessagingMixin:
         else:
             self.run_worker(self._do_pin(channel_id, event.msg_id), exclusive=False, group="msg-pin")  # type: ignore[attr-defined]
 
+    async def _client_event_reader(self) -> None:
+        from dataclasses import replace
+        from tgm.config.dirs import MEDIA_DIR
+        from tgm.core.client_events import NewMessageEvent, StatusChangeEvent
+
+        try:
+            while self.client:
+                event = await self.client.event_queue.get()
+                if isinstance(event, NewMessageEvent):
+                    msg = event.msg
+                    if "photo" in (msg.media_types or []) and not msg.media_paths:
+                        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+                        try:
+                            paths = await self.client.download_media(msg, MEDIA_DIR)
+                            if paths:
+                                msg = replace(msg, media_paths=paths)
+                        except Exception:
+                            pass
+                    if msg.channel_id == self.current_channel_id:
+                        self._post_to_chat(MessageSent(msg.channel_id, msg))
+                    self._refresh_channel_list()  # type: ignore[attr-defined]
+                elif isinstance(event, StatusChangeEvent):
+                    self._refresh_status_ui()  # type: ignore[attr-defined]
+        except asyncio.CancelledError:
+            pass
+
     async def _fetch_messages(self, channel_id: str) -> None:
         self._post_to_chat(MessagesLoading(channel_id))
         try:
@@ -110,18 +122,19 @@ class _MessagingMixin:
         except Exception:
             messages = []
         self._post_to_chat(MessagesLoaded(channel_id, messages))
+        for msg in messages:
+            if "photo" in (msg.media_types or []) and not msg.media_paths:
+                self.run_worker(  # type: ignore[attr-defined]
+                    self._download_msg_media(msg),
+                    exclusive=False,
+                    group=_MEDIA_GROUP,
+                )
 
-    async def _do_send(
-        self, channel_id: str, text: str, reply_to_id: str | None
-    ) -> None:
+    async def _do_send(self, channel_id: str, text: str, reply_to_id: str | None) -> None:
         if not self.client:
             return
         try:
-            msg = await self.client.add_message(
-                text, channel_id, reply_to_msg_id=reply_to_id
-            )
-            self.reply_to_msg = None
-            self._sync_input_bar_reply()
+            msg = await self.client.add_message(text, channel_id, reply_to_msg_id=reply_to_id)
             self._post_to_chat(MessageSent(channel_id, msg))
         except Exception:
             pass
@@ -153,6 +166,21 @@ class _MessagingMixin:
         except Exception:
             pass
 
+    async def _download_msg_media(self, msg: Message) -> None:
+        if not self.client:
+            return
+        from dataclasses import replace
+        from tgm.config.dirs import MEDIA_DIR
+        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        try:
+            paths = await self.client.download_media(msg, MEDIA_DIR)
+        except Exception:
+            return
+        if not paths:
+            return
+        updated = replace(msg, media_paths=paths)
+        self._post_to_chat(MessageUpdated(msg.channel_id, updated))
+
     async def _do_pin(self, channel_id: str, msg_id: str) -> None:
         if not self.client:
             return
@@ -177,24 +205,4 @@ class _MessagingMixin:
         for screen in self.screen_stack:  # type: ignore[attr-defined]
             if isinstance(screen, ChatScreen):
                 screen.post_message(message)
-                return
-
-    def _sync_input_bar_reply(self) -> None:
-        self._get_input_bar_and(lambda bar: bar.sync_reply(self.reply_to_msg))
-
-    def _focus_input(self) -> None:
-        from textual.widgets import Input
-
-        self._get_input_bar_and(lambda bar: bar.query_one("Input", Input).focus())
-
-    def _get_input_bar_and(self, fn: Any) -> None:
-        from tgm.screens.chat.screen import ChatScreen
-        from tgm.widgets.input.bar import InputBar
-
-        for screen in self.screen_stack:  # type: ignore[attr-defined]
-            if isinstance(screen, ChatScreen):
-                try:
-                    fn(screen.query_one(InputBar))
-                except Exception:
-                    pass
                 return

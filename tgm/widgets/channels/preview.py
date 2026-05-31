@@ -1,24 +1,20 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import ListItem, Static
 
 from tgm.config import ACCENT_THEMES, CHANNEL_COLORS, PALETTE
+from tgm.core.app_context import AppContext
 from tgm.core.models.channel import Channel
 from tgm.media.avatar import avatar_markup, get_cached_avatar, placeholder_avatar_markup
 
 _BADGE_DEFAULT_COLOR = PALETTE["accent_default"]
 _LAST_MAX_LEN = 24
 _UNSET = object()  # sentinel: "never computed yet"
-
-
-class AppContext(Protocol):
-    accent_theme: str
-    client: Any
 
 
 def _stable_color(channel_id: str) -> str:
@@ -73,10 +69,7 @@ class ChannelPreview(ListItem):
     def _peer_online(self) -> bool:
         if not self.channel.is_dm or not self.channel.peer_user_id:
             return False
-        client = self.ctx.client
-        if not client:
-            return False
-        user = client.users.get(self.channel.peer_user_id)
+        user = self.ctx.users.get(self.channel.peer_user_id)
         return bool(user and user.online)
 
     def _format_last(self) -> str:

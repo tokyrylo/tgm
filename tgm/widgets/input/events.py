@@ -13,9 +13,10 @@ class InputBarEvent(Message):
 
 
 class SendMessage(InputBarEvent):
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, reply_to_msg_id: str | None = None) -> None:
         super().__init__()
         self.text = text
+        self.reply_to_msg_id = reply_to_msg_id
 
 
 class SetReply(InputBarEvent):

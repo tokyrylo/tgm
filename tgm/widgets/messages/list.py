@@ -1,25 +1,18 @@
 from __future__ import annotations
 
 from datetime import date as date_cls
-from typing import Protocol, cast
+from typing import cast
 
 from textual.widgets import RichLog
 
 from tgm.config.themes import ACCENT_THEMES, PALETTE
+from tgm.core.app_context import AppContext
 from tgm.core.models.messages import Message
-from tgm.core.protocol import ClientProtocol
 from tgm.widgets.input.events import DeleteMessage, SetEdit, SetReply, TogglePinMessage
 
 from .bubble import Bubble, RenderContext, render_bubble, render_date_sep
 
 _ACCENT_DEFAULT = PALETTE["accent_default"]
-
-
-class AppContext(Protocol):
-    show_timestamps: bool
-    accent_theme: str
-    big_msg_threshold: int
-    client: ClientProtocol
 
 
 class MessageList(RichLog):
@@ -65,6 +58,16 @@ class MessageList(RichLog):
     def remove_message(self, msg_id: str) -> None:
         self._msgs = [m for m in self._msgs if m.id != msg_id]
         self._msgs_by_id.pop(msg_id, None)
+        self._rerender_all()
+
+    def replace_message(self, msg: Message) -> None:
+        from tgm.widgets.messages.bubble import invalidate_bubble
+        for i, m in enumerate(self._msgs):
+            if m.id == msg.id:
+                self._msgs[i] = msg
+                self._msgs_by_id[msg.id] = msg
+                invalidate_bubble(msg.id)
+                break
         self._rerender_all()
 
     def update_message(self, msg_id: str, text: str) -> None:
@@ -155,8 +158,8 @@ class MessageList(RichLog):
         self, msg: Message, highlight_query: str, rctx: RenderContext, *, is_cursor: bool = False
     ) -> Bubble:
         ctx = self.ctx
-        is_own = msg.user_id == ctx.client.current_user_id
-        user = ctx.client.users.get(msg.user_id)
+        is_own = msg.user_id == ctx.current_user_id
+        user = ctx.users.get(msg.user_id)
         bubble = render_bubble(
             msg,
             ctx=rctx,

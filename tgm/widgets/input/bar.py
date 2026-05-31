@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
@@ -9,6 +9,7 @@ from textual.css.query import NoMatches
 from textual.widgets import Button, Input
 
 from tgm.config.themes import PALETTE
+from tgm.core.app_context import AppContext
 
 from .events import AttachFile, ClearEdit, ClearReply, EditMessage, SendMessage
 from .reply_bar import ReplyBar
@@ -32,11 +33,6 @@ class _EmojiAC(Protocol):
     def select_prev(self) -> None: ...
 
 
-class AppContext(Protocol):
-    emoji_trigger: str
-    enter_to_send: bool
-
-
 class InputBar(Horizontal):
 
     def compose(self) -> ComposeResult:
@@ -54,6 +50,7 @@ class InputBar(Horizontal):
         self._reply_bar: ReplyBar = self.query_one(f"#{REPLY_BAR_ID}", ReplyBar)
         self._edit_bar: ReplyBar = self.query_one(f"#{EDIT_BAR_ID}", ReplyBar)
         self._editing_msg_id: str | None = None
+        self._reply_to_msg_id: str | None = None
         self._ac: _EmojiAC | None = self._safe_get_ac()
         self._ac_debounce: Timer | None = None
         self._ac_seq: int = 0
@@ -62,11 +59,11 @@ class InputBar(Horizontal):
     def ctx(self) -> AppContext:
         return cast(AppContext, self.app)
 
-    # ── public API called by TgmApp ───────────────────────────────────────────
+    # ── public API ────────────────────────────────────────────────────────────
 
     def sync_reply(self, reply: Any) -> None:
-        """Push reply state from TgmApp down into this widget."""
         if reply:
+            self._reply_to_msg_id = reply.id
             sender = reply.username or "?"
             preview = (reply.text[:60] if reply.text else "[Photo]").replace("[", "[[").replace("]", "]]")
             content = (
@@ -75,6 +72,7 @@ class InputBar(Horizontal):
             )
             self._reply_bar.show(content)
         else:
+            self._reply_to_msg_id = None
             self._reply_bar.show(None)
 
     def activate_edit(self, msg_id: str, text: str) -> None:
@@ -114,7 +112,9 @@ class InputBar(Horizontal):
             self._edit_bar.show(None)
             self._input.clear()
         else:
-            self.post_message(SendMessage(text))
+            self.post_message(SendMessage(text, self._reply_to_msg_id))
+            self._reply_to_msg_id = None
+            self._reply_bar.show(None)
             self._input.clear()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:

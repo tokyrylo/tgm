@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Button, Static
 
+from tgm.core.app_context import AppContext
 from tgm.core.models.channel import ChannelInfo
 from tgm.core.models.user import format_last_seen
-from tgm.core.protocol import ClientProtocol
 from tgm.screens._base import TgmModalScreen
-
-
-class AppContext(Protocol):
-    client: ClientProtocol
 
 
 class ChannelInfoModal(TgmModalScreen[None]):
@@ -37,7 +33,9 @@ class ChannelInfoModal(TgmModalScreen[None]):
         self.run_worker(self._load(), exclusive=True)
 
     async def _load(self) -> None:
-        info = await self.ctx.client.get_channel_info(self._channel_id)
+        info = await self.ctx.get_channel_info(self._channel_id)
+        if info is None:
+            return
         await self._display_info(info)
 
     async def _display_info(self, info: ChannelInfo) -> None:

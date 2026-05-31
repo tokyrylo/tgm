@@ -126,6 +126,28 @@ def _msg(
     )
 
 
+def _photo_msg(
+    id: str,
+    user: User,
+    caption: str,
+    channel_id: str,
+    ts: datetime,
+    read: bool = True,
+    out: bool = False,
+) -> Message:
+    return Message(
+        id=id,
+        user_id=user.id,
+        username=user.name,
+        text=caption,
+        timestamp=ts,
+        channel_id=channel_id,
+        read=read,
+        out=out,
+        media_types=["photo"],
+    )
+
+
 # ── channels ─────────────────────────────────────────────────────────────────
 
 _CHANNELS: list[Channel] = [
@@ -271,6 +293,7 @@ _MESSAGES: dict[str, list[Message]] = {
         _msg("g1-21", _DAVE, "metrics stable 📈", "g1", _t(hours=1), read=False),
         _msg("g1-22", _BOB, "love it", "g1", _t(minutes=45), read=False),
         _msg("g1-23", _ALICE, "ship it 🚢", "g1", _t(minutes=20), read=False),
+        _photo_msg("g1-24", _CAROL, "metrics dashboard 📊", "g1", _t(minutes=10), read=False),
     ],
     # ── random ───────────────────────────────────────────────────────────────
     "g2": [
@@ -504,6 +527,7 @@ _MESSAGES: dict[str, list[Message]] = {
             out=True,
         ),
         _msg("d1-13", _ALICE, "see you there!", "d1", _t(minutes=30), read=False),
+        _photo_msg("d1-14", _ALICE, "", "d1", _t(minutes=5), read=False),
     ],
     # ── Bob DM ───────────────────────────────────────────────────────────────
     "d2": [
@@ -913,6 +937,39 @@ class MockClient:
         ch = self.store.channels.get(channel_id)
         if ch:
             ch.unread = 0
+
+    async def download_media(self, msg, dest_dir) -> list[str]:
+        """Generate a synthetic colour-gradient image for mock photo messages."""
+        from pathlib import Path
+        import hashlib
+        try:
+            from PIL import Image as _Image
+        except ImportError:
+            return []
+        dest = Path(dest_dir)
+        dest.mkdir(parents=True, exist_ok=True)
+        path = dest / f"{msg.id}.jpg"
+        if path.exists():
+            return [str(path)]
+        seed = int(hashlib.md5(msg.id.encode()).hexdigest(), 16)
+        w, h = 160, 120
+        r0, g0, b0 = (seed >> 16) & 0xFF, (seed >> 8) & 0xFF, seed & 0xFF
+        r1, g1, b1 = (seed >> 24) & 0xFF, (seed >> 4) & 0xFF, (seed >> 12) & 0xFF
+        data = []
+        for y in range(h):
+            t = y / h
+            for x in range(w):
+                s = x / w
+                data.append((
+                    int(r0 * (1 - s) + r1 * s),
+                    int(g0 * (1 - t) + g1 * t),
+                    int(b0 + (b1 - b0) * (s + t) / 2),
+                ))
+        img = _Image.new("RGB", (w, h))
+        img.putdata(data)
+        img.save(str(path), "JPEG", quality=85)
+        await asyncio.sleep(0.3)
+        return [str(path)]
 
     async def forward_message(
         self, from_channel_id: str, to_channel_id: str, message_id: str
