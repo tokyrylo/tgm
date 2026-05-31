@@ -7,6 +7,31 @@ A full-featured Telegram client that runs entirely in the terminal, built with [
 ![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue)
 ![WIP](https://img.shields.io/badge/status-WIP-orange)
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="img/screenshot-2026-05-31_20-21-17.png" width="420" alt="Chat view with inline image"/><br/>
+      <sub>Chat — inline image rendering</sub>
+    </td>
+    <td align="center">
+      <img src="img/screenshot-2026-05-31_20-21-39.png" width="420" alt="Channel info modal"/><br/>
+      <sub>Channel / user info</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="img/screenshot-2026-05-31_20-22-01.png" width="420" alt="Settings — keybindings"/><br/>
+      <sub>Settings — keybindings</sub>
+    </td>
+    <td align="center">
+      <img src="img/screenshot-2026-05-31_20-22-25.png" width="420" alt="Emoji picker"/><br/>
+      <sub>Emoji picker</sub>
+    </td>
+  </tr>
+</table>
+
 ## What it is
 
 tgm brings a messenger-style interface to the terminal. Channels and DMs on the left, messages on the right — same layout as desktop Telegram, no GUI required. Useful if you spend most of your time in a terminal and don't want to switch context, or if you're on a machine without a graphical environment.
