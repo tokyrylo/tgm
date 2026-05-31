@@ -10,7 +10,7 @@ from textual.widgets import Footer, Input, ListView, LoadingIndicator, Static
 from tgm.config.keybindings import get_binding_objects
 from tgm.core.app_context import AppContext
 from tgm.screens._base import TgmScreen
-from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessagePinned, MessageSent, MessageUpdated, MessagesLoaded, MessagesLoading
+from tgm.screens.chat.events import MessageDeleted, MessageEdited, MessagePinned, MessageSent, MessageUpdated, MessagesLoaded, MessagesLoading, RefreshChannelList, RefreshStatusUI
 from tgm.widgets.channels.list import ChannelList
 from tgm.widgets.emoji import EmojiAutocomplete, EmojiPicker
 from tgm.widgets.input.bar import INPUT_ID, InputBar
@@ -102,7 +102,7 @@ class ChatScreen(TgmScreen):
 
         def _on_pick(path: str | None) -> None:
             if path:
-                self.ctx.send_file(path)  # type: ignore[attr-defined]
+                self.ctx.send_file(path)
 
         self.app.push_screen(FilePicker(), _on_pick)
 
@@ -149,6 +149,13 @@ class ChatScreen(TgmScreen):
         if event.channel_id != self.ctx.current_channel_id:
             return
         self.query_one(MessageList).replace_message(event.message)
+
+    def on_refresh_channel_list(self, _: RefreshChannelList) -> None:
+        self.query_one(ChannelList).refresh_previews()
+
+    def on_refresh_status_ui(self, _: RefreshStatusUI) -> None:
+        self.query_one(ChannelList).refresh_previews()
+        self._refresh_top_bar()
 
     def on_set_reply(self, event: SetReply) -> None:
         event.stop()

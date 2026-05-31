@@ -1,4 +1,5 @@
 """Pure rendering functions — no widget state, no self.app access."""
+
 from __future__ import annotations
 
 import re
@@ -15,8 +16,8 @@ from tgm.widgets.messages.renderer import format_text, format_text_highlighted
 _REPLY_COLOR = PALETTE["reply"]
 _READ_COLOR = PALETTE["read"]
 _OTHER_BG = PALETTE["bg_surface"]
-_CURSOR_BG = "#1e3a50"       # slightly brighter than bg_surface for selected other
-_CURSOR_OWN_BG = "#3a6fa0"   # slightly brighter than accent for selected own
+_CURSOR_BG = "#1e3a50"  # slightly brighter than bg_surface for selected other
+_CURSOR_OWN_BG = "#3a6fa0"  # slightly brighter than accent for selected own
 
 _MARKUP_RE = re.compile(r"\[/?[^\]]*\]")
 
@@ -25,8 +26,6 @@ def visible_len(text: str) -> int:
     """Length of text after removing Rich markup tags and unescaping [[."""
     return len(_MARKUP_RE.sub("", text).replace("[[", "["))
 
-
-# ── IR ────────────────────────────────────────────────────────────────────────
 
 @dataclass
 class Bubble:
@@ -39,8 +38,6 @@ class Bubble:
         return len(self.lines)
 
 
-# ── layout context ────────────────────────────────────────────────────────────
-
 @dataclass(frozen=True)
 class RenderContext:
     width: int
@@ -49,15 +46,13 @@ class RenderContext:
     large: bool
 
 
-# ── frame ─────────────────────────────────────────────────────────────────────
-
-def wrap_frame(lines: list[str], border_col: str, width: int, *, bright: bool = False) -> list[str]:
+def wrap_frame(
+    lines: list[str], border_col: str, width: int, *, bright: bool = False
+) -> list[str]:
     bar = "─" * max(0, width - 2)
     style = f"bold {border_col}" if bright else f"dim {border_col}"
     return [f"[{style}]╭{bar}╮[/]"] + lines + [f"[{style}]╰{bar}╯[/]"]
 
-
-# ── date separator ────────────────────────────────────────────────────────────
 
 def render_date_sep(dt, width: int) -> str:
     today = date.today()
@@ -72,8 +67,6 @@ def render_date_sep(dt, width: int) -> str:
     return f"[dim white]{' ' * pad}{raw}[/]"
 
 
-# ── media caches ──────────────────────────────────────────────────────────────
-
 _photo_cache: dict[tuple[str, int], list[str]] = {}
 _gallery_cache: dict[tuple[str | int, ...], list[str]] = {}
 
@@ -83,6 +76,7 @@ def render_photo(media_path: str, cols: int) -> list[str]:
     if key in _photo_cache:
         return _photo_cache[key]
     from tgm.media.avatar import avatar_markup
+
     markup = avatar_markup(Path(media_path), cols, cols)
     result = [markup] if markup else []
     _photo_cache[key] = result
@@ -117,6 +111,7 @@ def render_gallery(paths: list[str], width: int) -> list[str]:
 
     try:
         from PIL import Image
+
         main_px = _downsample(Image.open(Path(paths[0])), main_cols, main_rows)
         main_lines = render_halfblock(main_px).split("\n")
     except Exception:
@@ -126,6 +121,7 @@ def render_gallery(paths: list[str], width: int) -> list[str]:
     for p in paths[1:]:
         try:
             from PIL import Image
+
             px = _downsample(Image.open(Path(p)), thumb_cols, thumb_rows)
             thumbs.append(render_halfblock(px).split("\n"))
         except Exception:
@@ -134,7 +130,11 @@ def render_gallery(paths: list[str], width: int) -> list[str]:
     right_lines: list[str] = []
     for r in range(thumb_grid_rows):
         r1 = thumbs[r * 2] if r * 2 < n_thumbs else [" " * thumb_cols] * thumb_rows
-        r2 = thumbs[r * 2 + 1] if r * 2 + 1 < n_thumbs else [" " * thumb_cols] * thumb_rows
+        r2 = (
+            thumbs[r * 2 + 1]
+            if r * 2 + 1 < n_thumbs
+            else [" " * thumb_cols] * thumb_rows
+        )
         for t in range(thumb_rows):
             c1 = r1[t] if t < len(r1) else " " * thumb_cols
             c2 = r2[t] if t < len(r2) else " " * thumb_cols
@@ -151,20 +151,18 @@ def render_gallery(paths: list[str], width: int) -> list[str]:
     return result
 
 
-# ── reply quote ───────────────────────────────────────────────────────────────
-
 def render_reply_quote(reply_to_id: str, msgs_by_id: dict[str, Message]) -> str | None:
     orig = msgs_by_id.get(reply_to_id)
     if not orig:
         return None
     sender = orig.username or "?"
-    preview = (orig.text[:60] if orig.text else "[Photo]").replace("[", "[[").replace("]", "]]")
-    return (
-        f"[dim {_REPLY_COLOR}]▎[/] [dim {_REPLY_COLOR}]{sender}[/] [dim white]{preview}[/]"
+    preview = (
+        (orig.text[:60] if orig.text else "[Photo]")
+        .replace("[", "[[")
+        .replace("]", "]]")
     )
+    return f"[dim {_REPLY_COLOR}]▎[/] [dim {_REPLY_COLOR}]{sender}[/] [dim white]{preview}[/]"
 
-
-# ── bubble cache ──────────────────────────────────────────────────────────────
 
 _bubble_cache: dict[tuple[str, int, str | None], Bubble] = {}
 
@@ -179,8 +177,6 @@ def invalidate_bubble(msg_id: str) -> None:
     for key in [k for k in _bubble_cache if k[0].startswith(f"{msg_id}:")]:
         del _bubble_cache[key]
 
-
-# ── bubble ────────────────────────────────────────────────────────────────────
 
 def render_bubble(
     msg: Message,
@@ -203,11 +199,13 @@ def render_bubble(
         else (format_text(msg.text) if msg.text else "")
     )
     has_photo_type = "photo" in (msg.media_types or [])
-    has_media = bool(msg.media_paths and has_photo_type)
+    media_paths: list[str] = msg.media_paths or []
+    has_media = bool(media_paths) and has_photo_type
     is_loading_photo = has_photo_type and not has_media
-    is_gallery = has_media and len(msg.media_paths) > 1  # type: ignore[arg-type]
+    is_gallery = has_media and len(media_paths) > 1
     border_col = (
-        ctx.accent if is_own
+        ctx.accent
+        if is_own
         else (user.color if user and user.color != "text" else "text")
     )
 
@@ -217,9 +215,9 @@ def render_bubble(
         content.append("[dim white]📷 Photo[/]")
     elif has_media:
         content.extend(
-            render_gallery(msg.media_paths, ctx.width)  # type: ignore[arg-type]
+            render_gallery(media_paths, ctx.width)
             if is_gallery
-            else render_photo(msg.media_paths[0], min(40, ctx.width - 2))  # type: ignore[index]
+            else render_photo(media_paths[0], min(40, ctx.width - 2))
         )
 
     if msg.reply_to_msg_id:
@@ -229,7 +227,11 @@ def render_bubble(
 
     # media-only message (includes loading placeholder)
     if not msg.text and (has_media or is_loading_photo):
-        lines = wrap_frame(content, border_col, ctx.width, bright=is_cursor) if ctx.large else content
+        lines = (
+            wrap_frame(content, border_col, ctx.width, bright=is_cursor)
+            if ctx.large
+            else content
+        )
         bubble = Bubble(lines=lines, msg_id=msg.id, kind="media")
         if not is_cursor:
             _bubble_cache[cache_key] = bubble
@@ -266,7 +268,11 @@ def render_bubble(
         )
         kind = "other"
 
-    lines = wrap_frame(content, border_col, ctx.width, bright=is_cursor) if ctx.large else content
+    lines = (
+        wrap_frame(content, border_col, ctx.width, bright=is_cursor)
+        if ctx.large
+        else content
+    )
     bubble = Bubble(lines=lines, msg_id=msg.id, kind=kind)
     if not is_cursor:
         _bubble_cache[cache_key] = bubble

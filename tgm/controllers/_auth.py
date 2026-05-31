@@ -10,11 +10,15 @@ from tgm.screens.login.events import (
 )
 
 if TYPE_CHECKING:
+    from textual.app import App as _AppBase
+
     from tgm.core.protocol import ClientProtocol
     from tgm.screens import LoginScreen as _LoginScreen
+else:
+    _AppBase = object
 
 
-class _AuthMixin:
+class _AuthMixin(_AppBase):
     client: ClientProtocol | None
     current_channel_id: str | None
     _skip_login: bool
@@ -25,24 +29,24 @@ class _AuthMixin:
         from tgm.screens import LoginScreen
 
         loading = self.client is not None
-        self.push_screen(LoginScreen(loading=loading))  # type: ignore[attr-defined]
+        self.push_screen(LoginScreen(loading=loading))
 
     def on_login_screen_phone_submitted(self, event: PhoneSubmitted) -> None:
-        self.run_worker(self._send_code(event.phone), exclusive=True)  # type: ignore[attr-defined]
+        self.run_worker(self._send_code(event.phone), exclusive=True)
 
     def on_login_screen_code_submitted(self, event: CodeSubmitted) -> None:
-        self.run_worker(self._verify_code(event.phone, event.code), exclusive=True)  # type: ignore[attr-defined]
+        self.run_worker(self._verify_code(event.phone, event.code), exclusive=True)
 
     def on_login_screen_password_submitted(self, event: PasswordSubmitted) -> None:
-        self.run_worker(self._verify_password(event.password), exclusive=True)  # type: ignore[attr-defined]
+        self.run_worker(self._verify_password(event.password), exclusive=True)
 
     def on_login_screen_sms_requested(self, event: SmsRequested) -> None:
-        self.run_worker(self._resend_sms(event.phone), exclusive=True)  # type: ignore[attr-defined]
+        self.run_worker(self._resend_sms(event.phone), exclusive=True)
 
     def _login_screen(self) -> _LoginScreen:
         from tgm.screens import LoginScreen
 
-        return self.query_one(LoginScreen)  # type: ignore[attr-defined]
+        return self.query_one(LoginScreen)
 
     async def _send_code(self, phone: str) -> None:
         if not self.client:
@@ -89,5 +93,7 @@ class _AuthMixin:
         if self.client:
             if self.client.channel_list:
                 self.current_channel_id = self.client.channel_list[0].id
-            self.run_worker(self._client_event_reader(), exclusive=False, group="client-events")  # type: ignore[attr-defined]
-        self.push_screen(ChatScreen())  # type: ignore[attr-defined]
+            self.run_worker(
+                self._client_event_reader(), exclusive=False, group="client-events"
+            )
+        self.push_screen(ChatScreen())

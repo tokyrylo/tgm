@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import cast
 
 from textual.app import ComposeResult
@@ -32,6 +33,8 @@ from tgm.screens.settings.events import (
 from tgm.screens.settings.key_capture import KeyCaptureScreen
 from tgm.screens.settings.settings_section import SETTINGS_SECTIONS, SettingsSection
 
+_SectionRenderer = Callable[[Static, VerticalScroll], Awaitable[None]]
+
 _SECTION_LABELS: dict[str, str] = {
     "app": "App",
     "chat": "Chat",
@@ -41,7 +44,7 @@ _SECTION_LABELS: dict[str, str] = {
 
 
 class SettingsScreen(TgmScreen):
-    BINDINGS = get_binding_objects("settings")  # type: ignore[assignment]
+    BINDINGS = get_binding_objects("settings")
 
     _editing_channel_id: str | None = None
 
@@ -84,99 +87,101 @@ class SettingsScreen(TgmScreen):
         event.stop()
         await self._show_chat_settings(event.channel_id)
 
+    def _section_renderers(self) -> dict[str, _SectionRenderer]:
+        return {
+            "account":       self._render_account,
+            "general":       self._render_general,
+            "appearance":    self._render_appearance,
+            "input":         self._render_input,
+            "chats":         self._render_chats,
+            "notifications": self._render_notifications,
+            "keybindings":   self._render_keybindings,
+            "about":         self._render_about,
+        }
+
     async def _show_section(self, section_id: str) -> None:
         header = self.query_one("#settings-content-header", Static)
         content = self.query_one("#settings-content", VerticalScroll)
         await content.remove_children()
+        renderer = self._section_renderers().get(section_id)
+        if renderer:
+            await renderer(header, content)
 
-        if section_id == "account":
-            await self._show_account(header, content)
-        elif section_id == "general":
-            header.update("[bold white]General[/]")
-            await content.mount(
-                Checkbox("Enter to send", id="enter_to_send", value=self.ctx.enter_to_send),
-                Checkbox("Show timestamps", id="show_timestamps", value=self.ctx.show_timestamps),
-            )
-        elif section_id == "appearance":
-            header.update("[bold white]Appearance[/]")
-            accents = [(name, name) for name in ACCENT_THEMES]
-            await content.mount(
-                Static("[dim]Accent color[/]", classes="settings-option-label"),
-                Select(accents, id="accent_color", value=self.ctx.accent_theme),
-                Static("[dim]Message density[/]", classes="settings-option-label"),
-                Select(
-                    [
-                        ("Comfortable", "comfortable"),
-                        ("Compact", "compact"),
-                        ("Cozy", "cozy"),
-                    ],
-                    id="message_density",
-                    value=self.ctx.message_density,
-                ),
-                Static("", classes="settings-spacer"),
-                Static("[bold]Text[/]", classes="settings-option-label"),
-                Checkbox("Wrap long messages", id="text_wrap", value=self.ctx.text_wrap),
-                Static("[dim]Text opacity[/]", classes="settings-option-label"),
-                Select(
-                    [("100%", 1.0), ("90%", 0.9), ("80%", 0.8), ("70%", 0.7)],
-                    id="text_opacity",
-                    value=self.ctx.text_opacity,
-                ),
-                Static("", classes="settings-spacer"),
-                Static("[bold]Message borders[/]", classes="settings-option-label"),
-                Select(
-                    [("Off", 0), ("On", 1)],
-                    id="big_msg_threshold",
-                    value=self.ctx.big_msg_threshold,
-                ),
-                Static("[dim]Draw a frame around each message[/]", classes="settings-hint"),
-            )
-        elif section_id == "input":
-            header.update("[bold white]Input[/]")
-            await content.mount(
-                Static("[dim]Emoji autocomplete trigger[/]", classes="settings-option-label"),
-                Select(
-                    [
-                        ("colon ( : )", ":"),
-                        ("at ( @ )", "@"),
-                        ("hash ( # )", "#"),
-                        ("semicolon ( ; )", ";"),
-                    ],
-                    id="emoji_trigger",
-                    value=self.ctx.emoji_trigger,
-                ),
-                Static(
-                    "[dim]Choose a character that opens emoji suggestions[/]",
-                    classes="settings-hint",
-                ),
-                Static("", classes="settings-spacer"),
-                Checkbox("Enter to send", id="enter_to_send", value=self.ctx.enter_to_send),
-            )
-        elif section_id == "chats":
-            header.update("[bold white]Chats[/]")
-            await self._show_chat_list(content)
-        elif section_id == "notifications":
-            header.update("[bold white]Notifications[/]")
-            await content.mount(
-                Checkbox(
-                    "Enable notifications",
-                    id="notifications",
-                    value=self.ctx.notifications,
-                ),
-                Static("[dim]Get notified about new messages[/]", classes="settings-hint"),
-            )
-        elif section_id == "keybindings":
-            header.update("[bold white]Keybindings[/]")
-            await self._show_keybindings(content)
-        elif section_id == "about":
-            header.update("[bold white]About[/]")
-            await content.mount(
-                Static("[bold]CliTel[/]", classes="settings-about-name"),
-                Static("[dim]Telegram-style TUI Chat[/]", classes="settings-about-version"),
-                Static("[dim]v0.1.0[/]", classes="settings-about-version"),
-                Static("", classes="settings-spacer"),
-                Static("[dim]Built with Textual[/]", classes="settings-about-version"),
-            )
+    async def _render_account(self, header: Static, content: VerticalScroll) -> None:
+        await self._show_account(header, content)
+
+    async def _render_general(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]General[/]")
+        await content.mount(
+            Checkbox("Enter to send", id="enter_to_send", value=self.ctx.enter_to_send),
+            Checkbox("Show timestamps", id="show_timestamps", value=self.ctx.show_timestamps),
+        )
+
+    async def _render_appearance(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]Appearance[/]")
+        accents = [(name, name) for name in ACCENT_THEMES]
+        await content.mount(
+            Static("[dim]Accent color[/]", classes="settings-option-label"),
+            Select(accents, id="accent_color", value=self.ctx.accent_theme),
+            Static("[dim]Message density[/]", classes="settings-option-label"),
+            Select(
+                [("Comfortable", "comfortable"), ("Compact", "compact"), ("Cozy", "cozy")],
+                id="message_density",
+                value=self.ctx.message_density,
+            ),
+            Static("", classes="settings-spacer"),
+            Static("[bold]Text[/]", classes="settings-option-label"),
+            Checkbox("Wrap long messages", id="text_wrap", value=self.ctx.text_wrap),
+            Static("[dim]Text opacity[/]", classes="settings-option-label"),
+            Select(
+                [("100%", 1.0), ("90%", 0.9), ("80%", 0.8), ("70%", 0.7)],
+                id="text_opacity",
+                value=self.ctx.text_opacity,
+            ),
+            Static("", classes="settings-spacer"),
+            Static("[bold]Message borders[/]", classes="settings-option-label"),
+            Select([("Off", 0), ("On", 1)], id="big_msg_threshold", value=self.ctx.big_msg_threshold),
+            Static("[dim]Draw a frame around each message[/]", classes="settings-hint"),
+        )
+
+    async def _render_input(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]Input[/]")
+        await content.mount(
+            Static("[dim]Emoji autocomplete trigger[/]", classes="settings-option-label"),
+            Select(
+                [("colon ( : )", ":"), ("at ( @ )", "@"), ("hash ( # )", "#"), ("semicolon ( ; )", ";")],
+                id="emoji_trigger",
+                value=self.ctx.emoji_trigger,
+            ),
+            Static("[dim]Choose a character that opens emoji suggestions[/]", classes="settings-hint"),
+            Static("", classes="settings-spacer"),
+            Checkbox("Enter to send", id="enter_to_send", value=self.ctx.enter_to_send),
+        )
+
+    async def _render_chats(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]Chats[/]")
+        await self._show_chat_list(content)
+
+    async def _render_notifications(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]Notifications[/]")
+        await content.mount(
+            Checkbox("Enable notifications", id="notifications", value=self.ctx.notifications),
+            Static("[dim]Get notified about new messages[/]", classes="settings-hint"),
+        )
+
+    async def _render_keybindings(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]Keybindings[/]")
+        await self._show_keybindings(content)
+
+    async def _render_about(self, header: Static, content: VerticalScroll) -> None:
+        header.update("[bold white]About[/]")
+        await content.mount(
+            Static("[bold]CliTel[/]", classes="settings-about-name"),
+            Static("[dim]Telegram-style TUI Chat[/]", classes="settings-about-version"),
+            Static("[dim]v0.1.0[/]", classes="settings-about-version"),
+            Static("", classes="settings-spacer"),
+            Static("[dim]Built with Textual[/]", classes="settings-about-version"),
+        )
 
     async def _show_account(self, header: Static, content: VerticalScroll) -> None:
         header.update("[bold white]Account[/]")

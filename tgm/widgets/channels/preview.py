@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any, cast
+from pathlib import Path
+from typing import cast
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import ListItem, Static
 
 from tgm.config import ACCENT_THEMES, CHANNEL_COLORS, PALETTE
-from tgm.core.app_context import AppContext
+from tgm.core.app_context import ChannelContext, DisplaySettings
+
+
+class _PreviewCtx(ChannelContext, DisplaySettings):
+    """Intersection of the two protocols needed by ChannelPreview."""
 from tgm.core.models.channel import Channel
 from tgm.media.avatar import avatar_markup, get_cached_avatar, placeholder_avatar_markup
 
@@ -24,7 +29,7 @@ def _stable_color(channel_id: str) -> str:
 
 class ChannelPreview(ListItem):
 
-    def __init__(self, channel: Channel, **kwargs: Any) -> None:
+    def __init__(self, channel: Channel, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self.channel = channel
         # avatar diff: compare blob identity (O(1)), not rendered markup
@@ -37,8 +42,8 @@ class ChannelPreview(ListItem):
         self._c_online: bool | None = None
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
+    def ctx(self) -> _PreviewCtx:
+        return cast(_PreviewCtx, self.app)
 
     # compose = structure only; data flows via on_mount → refresh_content
     def compose(self) -> ComposeResult:
@@ -59,7 +64,7 @@ class ChannelPreview(ListItem):
     def invalidate_avatar(self) -> None:
         self._avatar_source = _UNSET
 
-    def _render_avatar(self, source: Any) -> str:
+    def _render_avatar(self, source: Path | None) -> str:
         if source is not None:
             result = avatar_markup(source, cols=4, rows=3)
             if result:

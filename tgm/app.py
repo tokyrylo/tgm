@@ -8,7 +8,7 @@ from textual.app import App
 from tgm.config.keybindings import get_binding_objects
 from tgm.config.settings_store import load_channel_settings as _load_channel_settings
 from tgm.config.settings_store import load_global as _load_global
-from tgm.controllers import _AuthMixin, _ChannelsMixin, _MessagingMixin, _SettingsMixin
+from tgm.controllers import _AuthMixin, _ChannelsMixin, _MediaMixin, _MessagingMixin, _SettingsMixin
 from tgm.core import ClientProtocol
 from tgm.core.models.channel import ChannelSettings
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 _STYLE = Path(__file__).parent / "static" / "styles" / "style.tcss"
 
 
-class TgmApp(_AuthMixin, _MessagingMixin, _ChannelsMixin, _SettingsMixin, App):
+class TgmApp(_AuthMixin, _MessagingMixin, _MediaMixin, _ChannelsMixin, _SettingsMixin, App):
 
     CSS_PATH = _STYLE
     ENABLE_COMMAND_PALETTE = False

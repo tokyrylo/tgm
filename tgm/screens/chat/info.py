@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Button, Static
 
-from tgm.core.app_context import AppContext
+from tgm.core.app_context import AppActions
 from tgm.core.models.channel import ChannelInfo
 from tgm.core.models.user import format_last_seen
 from tgm.screens._base import TgmModalScreen
@@ -18,8 +18,8 @@ class ChannelInfoModal(TgmModalScreen[None]):
         self._channel_id = channel_id
 
     @property
-    def ctx(self) -> AppContext:
-        return cast(AppContext, self.app)
+    def ctx(self) -> AppActions:
+        return cast(AppActions, self.app)
 
     def compose(self) -> ComposeResult:
         with Vertical(id="ci-container"):

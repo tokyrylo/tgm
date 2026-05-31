@@ -1,6 +1,6 @@
 """Keybinding definitions — defaults, overrides, and Textual Binding objects."""
 
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 
 from tgm.config.settings_store import (
     load_keybinding_overrides,
@@ -65,7 +65,7 @@ def reload():
     _cache = None
 
 
-def get_binding_objects(section: str) -> list[Binding]:
+def get_binding_objects(section: str) -> list[BindingType]:
     return [
         Binding(key, action, desc, show=show)
         for key, action, desc, show in _load().get(section, [])
